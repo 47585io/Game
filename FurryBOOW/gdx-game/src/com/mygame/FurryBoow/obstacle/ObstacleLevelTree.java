@@ -1,6 +1,7 @@
 package com.mygame.FurryBoow.obstacle;
 import android.graphics.*;
 
+/* 按矩形物体的嵌套 */
 public class ObstacleLevelTree implements ObstacleContainer
 {
 	public ObstacleLevelTree(){
