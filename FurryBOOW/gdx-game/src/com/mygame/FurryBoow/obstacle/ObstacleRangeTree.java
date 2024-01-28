@@ -11,31 +11,19 @@ public class ObstacleRangeTree implements ObstacleContainer
 	public ObstacleRangeTree(){
 		mObstacleCount = 0;
 	}
-	public ObstacleRangeTree(Obstacle[] objs, int[] yPoints, int[] xPoints)
+	public ObstacleRangeTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
 	{
-		
-	}
-	/* 用指定的点构建区间列表，返回区间列表的长度 */
-	private static int checkPoints(int[] points)
-	{
-		//对points排序并去重，便构建了一个区间列表
-		Arrays.sort(points);
-		int length = points.length;
-		int remainingLength = length;
-		int prevHead = 1, prevTail = 1;
-		for(;prevHead < length;)
-		{
-			for(;points[prevHead] == points[prevHead - 1]; ++prevHead){
-				//每有一个重复的元素，剩余元素个数减1
-				remainingLength--;
-				if(prevHead == length - 1) break;
-			}
-			//头找到一个不重复的元素，然后递给尾巴
-			points[prevTail++] = points[prevHead++];
+		if(objs.length == 0){
+			return;
 		}
-		return remainingLength;
+		mObstacleCount = objs.length;
+		mRectOfObstacle = new IdentityHashMap<>(mObstacleCount * 2);
+		for(int i = 0; i < mObstacleCount; ++i){
+			mRectOfObstacle.put(objs[i], new Rect(xStarts[i], yStarts[i], xEnds[i], yEnds[i]));
+		}
+		mTree = buildTree(objs, xStarts, xEnds, yStarts, yEnds);
 	}
-
+	
 	/* 向二维区间树中添加一个(被外接矩形包围的)物体 */
 	public void addObstacle(Obstacle obj, int xStart, int xEnd, int yStart, int yEnd)
 	{
@@ -51,7 +39,7 @@ public class ObstacleRangeTree implements ObstacleContainer
 		}else{
 			//否则重新设置物体的矩形范围
 			rect.set(xStart, yStart, xEnd, yEnd);
-			mTree.removeObstacle(xStart, yStart, xEnd, yEnd, obj);
+			mTree.removeObstacle(xStart, xEnd, yStart, yEnd, obj);
 		}
 		mTree.addObstacle(xStart, xEnd, yStart, yEnd, obj);
 	}
@@ -160,8 +148,60 @@ public class ObstacleRangeTree implements ObstacleContainer
 	
 	//由于这些点总是顺序排列，所以可以使用二分搜索法来夹逼区间
 	//利用y轴上的点，可轻易夹逼出矩形所在的所有y区间，再用x轴上的点夹逼了所有y→x区间
+	//这样就实现了局部搜索，只遍历与搜索范围重叠的区间，其它的区间被直接舍弃
 	//另外，按扫描线(矩形的边)分隔的区间，其中的物体必然填充整个区间
 	//因此搜索时仅需判断搜索范围是否与区间重叠，如果是则直接获取x区间内的所有物体
+	
+	/* 用许多矩形物体构建一颗y轴区间树 */
+	private static yTree buildTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
+	{
+		int length = objs.length;
+		int[] yPoints = new int[length * 2];
+		int[] yPointOverlap = new int[length * 2];
+		xTree[] yRangeNodes = new xTree[length * 2];
+		for(int i = 0; i < length; ++i){
+			yPoints[i * 2] = yStarts[i];
+			yPoints[i * 2 + 1] = yEnds[i];
+		}
+		int yPointCount = checkPoints(yPoints, yPointOverlap);
+		
+		//count & makeTable
+		//send To xTree
+	}
+	/* 用指定的点构建区间列表(points最少有两个元素)，返回区间列表的长度，并记录每个数的重复次数 */
+	private static int checkPoints(int[] points, int[] pointOverlap)
+	{
+		//对points排序并去重，便构建了一个区间列表
+		Arrays.sort(points);
+		int length = points.length;
+		int remainingLength = length;
+		int prevHead = 1, prevTail = 1;
+		pointOverlap[0] = 1;
+		//首先，我们知道第一个元素必然重复1次
+		//然后，prevHead总共可以再遍历(n - 1)次，所以刚好每个点都有一次机会(n次)
+		for(;prevHead < length;)
+		{
+			for(;points[prevHead] == points[prevHead - 1]; ++prevHead){
+				//每有一个重复的元素，剩余元素个数减1，且当前点的重复个数加1
+				//prevTail指向的是即将放入新元素的位置，因此只需要将旧元素(prevTail - 1)重复个数加1
+				remainingLength--;
+				++pointOverlap[prevTail - 1];
+				if(prevHead == length - 1){
+					//这时，最后一次在此处执行
+					return remainingLength;
+				} 
+			}
+			//头找到一个不重复的元素，然后递给尾巴
+			//不重复的元素被放入prevTail，因此该下标的点重复次数为1
+			++pointOverlap[prevTail];
+			points[prevTail++] = points[prevHead++];
+		}
+		return remainingLength;
+	}
+	/*  */
+	private static int[] makeTable(){
+
+	}
 	
 	private yTree mTree; //y轴区间树
 	private int mObstacleCount; //容器内物体的个数
