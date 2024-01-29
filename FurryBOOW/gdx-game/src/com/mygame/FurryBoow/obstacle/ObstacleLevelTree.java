@@ -1,12 +1,12 @@
 package com.mygame.FurryBoow.obstacle;
 import android.graphics.*;
 
-/* 按矩形物体的嵌套 */
+/* 按矩形物体的嵌套层次构建的树 */
 public class ObstacleLevelTree implements ObstacleContainer
 {
-	public ObstacleLevelTree(){
-		mRoot = new Node();
-		mFactory = ObstacleContainerFactory.getInstance();
+	public ObstacleLevelTree(ObstacleContainerFactory fa){
+		mRoot = new TreeNode();
+		mFactory = fa;
 	}
 	public void setContainerFactory(ObstacleContainerFactory factory){
 		mFactory = factory;
@@ -43,13 +43,30 @@ public class ObstacleLevelTree implements ObstacleContainer
 		return mRoot.mChildCount;
 	}
 	
-	private Node mRoot;
+	private TreeNode mRoot;
 	private ObstacleContainerFactory mFactory;
 	
-	private static class Node
+	private static class TreeNode
 	{
 		int mChildCount;
-		Node[] mChildren;
+		TreeNode[] mChildren;
 		ObstacleContainer container;
+		
+		private void addChild(){
+			
+		}
+		private void removeChild(){
+			// if container size == 0， then remove node
+		}
+		
+		private boolean in(Obstacle obj){
+			// if obj in node, then addChild(new Node(obj));
+			return false;
+		}
+		private boolean op(Obstacle obj){
+			// if obj op node， then container.add(obj)
+			return false;
+		}
+		// if obj out node， then new Node() -> oldNode + new Node()
 	}
 }

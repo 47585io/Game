@@ -6,13 +6,35 @@ import java.util.*;
 import android.graphics.*;
 import java.util.function.*;
 
-/* 用于存储和快速获取矩形物体的二维区间树 */
+/* 用于存储和快速获取指定范围内的矩形物体的二维区间树 */
 public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 {
 	public ObstacleRangeTree(){
 		mObstacleCount = 0;
 	}
-	public ObstacleRangeTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
+	public ObstacleRangeTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds){
+		buildTree(objs, xStarts, xEnds, yStarts, yEnds);
+	}
+	public ObstacleRangeTree(ObstacleContainer container, int xStart, int xEnd, int yStart, int yEnd)
+	{
+		Obstacle[] objs = container.getObstacles(xStart, xEnd, yStart, yEnd);
+		int length = objs.length;
+		Rect rect = new Rect();
+		int[] xStarts = new int[length];
+		int[] xEnds = new int[length];
+		int[] yStarts = new int[length];
+		int[] yEnds = new int[length];
+		for(int i = 0; i < length; ++i){
+			container.getObstacleRect(objs[i], rect);
+			xStarts[i] = rect.left;
+			xEnds[i] = rect.right;
+			yStarts[i] = rect.top;
+			yEnds[i] = rect.bottom;
+		}
+		buildTree(objs, xStarts, xEnds, yStarts, yEnds);
+	}
+	/* 用许多矩形物体快速构建一颗二维区间树 */
+	private void buildTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
 	{
 		if(objs.length == 0){
 			return;
@@ -23,6 +45,28 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 			mRectOfObstacle.put(objs[i], new Rect(xStarts[i], yStarts[i], xEnds[i], yEnds[i]));
 		}
 		mTree = new yTree(objs, xStarts, xEnds, yStarts, yEnds);
+	}
+	
+	/* 快速克隆一个新的二维区间树(深拷贝) */
+	public ObstacleRangeTree clone()
+	{
+		//单个物体可处于多颗树中，它在不同的树中的位置可以不同
+		ObstacleRangeTree tree = new ObstacleRangeTree();
+		if(mObstacleCount == 0){
+			return tree;
+		}
+		tree.mObstacleCount = mObstacleCount;
+		tree.mTree = mTree.clone();
+		tree.mRectOfObstacle = (IdentityHashMap<Obstacle, Rect>) mRectOfObstacle.clone();
+		//哈希表的clone，只会克隆内部的表，而不会克隆键和值，因此这里将新的哈希表中的键对应的值替换为新的值
+		BiFunction<Obstacle, Rect, Rect> deepClone = new BiFunction<Obstacle, Rect, Rect>()
+		{
+			public Rect apply(Obstacle obj, Rect rect){
+				return new Rect(rect);
+			}
+		};
+		tree.mRectOfObstacle.replaceAll(deepClone);
+		return tree;
 	}
 	
 	/* 向二维区间树中添加一个(被外接矩形包围的)物体 */
@@ -81,7 +125,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		return mObstacleCount;
 	}
 
-	/* 获取在二维区间树中与指定的矩形查找范围重叠的所有矩形物体 */
+	/* 获取在二维区间树中与指定的矩形查找范围重叠的所有矩形物体，查找范围越小会越快 */
 	public Obstacle[] getObstacles(int xStart, int xEnd, int yStart, int yEnd)
 	{
 		if(mObstacleCount == 0){
@@ -132,25 +176,6 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 	}
 	private static final IdentityHashMap[] sCachedBuffer = new IdentityHashMap[6];
 
-	/* 克隆一个新的二维区间树(深拷贝) */
-	public ObstacleRangeTree clone() 
-	{
-		//单个物体可处于多颗树中，它在不同的树中的位置可以不同
-		ObstacleRangeTree tree = new ObstacleRangeTree();
-		tree.mTree = mTree.clone();
-		tree.mObstacleCount = mObstacleCount;
-		tree.mRectOfObstacle = (IdentityHashMap<Obstacle, Rect>) mRectOfObstacle.clone();
-		//哈希表的clone，只会克隆内部的表，而不会克隆键和值，因此这里将新的哈希表中的键对应的值替换为新的值
-		BiFunction<Obstacle, Rect, Rect> deepClone = new BiFunction<Obstacle, Rect, Rect>()
-		{
-			public Rect apply(Obstacle obj, Rect rect){
-				return new Rect(rect);
-			}
-		};
-		tree.mRectOfObstacle.replaceAll(deepClone);
-		return tree;
-	}
-	
 	//用一条扫描线从上往下扫，每遇到一个矩形的横边就将这条边的纵坐标记录下来
 	//用这个方法将所有矩形横边的纵坐标投影到y轴上，用这些有序坐标点构建一个点数组
 	//每两y点之间构成一个区间，区间内的数据存储在左边的点的下标处，有效区间数比点数少1，为了方便，将最后一个点置为空区间
@@ -484,7 +509,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 	*/
 	private static int[] countPoints(int[] points, int pointCount, int[] starts, int[] ends, int objSize)
 	{
-		//遍历每个物体，二分搜索与它的重叠点区间，并将这些区间的元素个数加1
+		//遍历每个物体，二分搜索与它重叠的点区间，并将这些区间的元素个数加1
 		int[] countPoints = new int[pointCount];
 		for(int i = 0; i < objSize; ++i)
 		{

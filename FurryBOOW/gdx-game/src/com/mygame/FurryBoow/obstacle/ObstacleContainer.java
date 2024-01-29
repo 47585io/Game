@@ -13,15 +13,13 @@ public interface ObstacleContainer
 	
 	public int getObstacleCount();
 	
-	public static class ObstacleContainerFactory
+	//public void containerRect(Rect rect)
+	
+	//public ObstacleContainer subContainer(int xStart, int xEnd, int yStart, int yEnd)
+	
+	
+	public static interface ObstacleContainerFactory
 	{
-		private static final ObstacleContainerFactory mInstance = new ObstacleContainerFactory();
-
-		public static ObstacleContainerFactory getInstance(){
-			return mInstance;
-		}
-		public ObstacleContainer newObstacleContainer(){
-			return new ObstacleRangeTree();
-		}
+		public ObstacleContainer newObstacleContainer()
 	}
 }
