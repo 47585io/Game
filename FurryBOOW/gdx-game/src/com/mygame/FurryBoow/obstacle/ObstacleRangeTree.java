@@ -4,9 +4,10 @@ import com.mygame.FurryBoow.array.*;
 import com.mygame.FurryBoow.obstacle.*;
 import java.util.*;
 import android.graphics.*;
+import java.util.function.*;
 
 /* 用于存储和快速获取矩形物体的二维区间树 */
-public class ObstacleRangeTree implements ObstacleContainer
+public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 {
 	public ObstacleRangeTree(){
 		mObstacleCount = 0;
@@ -130,6 +131,25 @@ public class ObstacleRangeTree implements ObstacleContainer
 		}
 	}
 	private static final IdentityHashMap[] sCachedBuffer = new IdentityHashMap[6];
+
+	/* 克隆一个新的二维区间树(深拷贝) */
+	public ObstacleRangeTree clone() 
+	{
+		//单个物体可处于多颗树中，它在不同的树中的位置可以不同
+		ObstacleRangeTree tree = new ObstacleRangeTree();
+		tree.mTree = mTree.clone();
+		tree.mObstacleCount = mObstacleCount;
+		tree.mRectOfObstacle = (IdentityHashMap<Obstacle, Rect>) mRectOfObstacle.clone();
+		//哈希表的clone，只会克隆内部的表，而不会克隆键和值，因此这里将新的哈希表中的键对应的值替换为新的值
+		BiFunction<Obstacle, Rect, Rect> deepClone = new BiFunction<Obstacle, Rect, Rect>()
+		{
+			public Rect apply(Obstacle obj, Rect rect){
+				return new Rect(rect);
+			}
+		};
+		tree.mRectOfObstacle.replaceAll(deepClone);
+		return tree;
+	}
 	
 	//用一条扫描线从上往下扫，每遇到一个矩形的横边就将这条边的纵坐标记录下来
 	//用这个方法将所有矩形横边的纵坐标投影到y轴上，用这些有序坐标点构建一个点数组
