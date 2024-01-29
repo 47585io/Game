@@ -11,9 +11,8 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 {
 	public ObstacleRangeTree(){
 		mObstacleCount = 0;
-	}
-	public ObstacleRangeTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds){
-		buildTree(objs, xStarts, xEnds, yStarts, yEnds);
+		mTree = new yTree();
+		mBounds = new xTree();
 	}
 	public ObstacleRangeTree(ObstacleContainer container, int xStart, int xEnd, int yStart, int yEnd)
 	{
@@ -33,11 +32,18 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		}
 		buildTree(objs, xStarts, xEnds, yStarts, yEnds);
 	}
+	
+	public static ObstacleRangeTree valueOf(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds){
+		return new ObstacleRangeTree().buildTree(objs, xStarts, xEnds, yStarts, yEnds);
+	}
 	/* 用许多矩形物体快速构建一颗二维区间树 */
-	private void buildTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
+	private ObstacleRangeTree buildTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
 	{
 		if(objs.length == 0){
-			return;
+			mObstacleCount = 0;
+			mTree = new yTree();
+			mBounds = new xTree();
+			return this;
 		}
 		mObstacleCount = objs.length;
 		mRectOfObstacle = new IdentityHashMap<>(mObstacleCount * 2);
@@ -45,6 +51,8 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 			mRectOfObstacle.put(objs[i], new Rect(xStarts[i], yStarts[i], xEnds[i], yEnds[i]));
 		}
 		mTree = new yTree(objs, xStarts, xEnds, yStarts, yEnds);
+		mBounds = new xTree(objs, xStarts, xEnds);
+		return this;
 	}
 	
 	/* 快速克隆一个新的二维区间树(深拷贝) */
@@ -57,6 +65,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		}
 		tree.mObstacleCount = mObstacleCount;
 		tree.mTree = mTree.clone();
+		tree.mBounds = mBounds.clone();
 		tree.mRectOfObstacle = (IdentityHashMap<Obstacle, Rect>) mRectOfObstacle.clone();
 		//哈希表的clone，只会克隆内部的表，而不会克隆键和值，因此这里将新的哈希表中的键对应的值替换为新的值
 		BiFunction<Obstacle, Rect, Rect> deepClone = new BiFunction<Obstacle, Rect, Rect>()
@@ -67,6 +76,17 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		};
 		tree.mRectOfObstacle.replaceAll(deepClone);
 		return tree;
+	}
+	
+	/* 清空二维区间树内的所有矩形 */
+	public void clear()
+	{
+		mObstacleCount = 0;
+		if(mRectOfObstacle != null){
+			mRectOfObstacle.clear();
+		}
+		mTree = new yTree();
+		mBounds = new xTree();
 	}
 	
 	/* 向二维区间树中添加一个(被外接矩形包围的)物体 */
@@ -107,7 +127,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		}
 	}
 
-	/* 获取指定物体的矩形范围，成功获取则返回true */
+	/* 获取指定物体的矩形范围，如果有则返回true */
 	public boolean getObstacleRect(Obstacle obj ,Rect rect)
 	{
 		if(mRectOfObstacle != null)
@@ -174,8 +194,40 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 			}
 		}
 	}
-	private static final IdentityHashMap[] sCachedBuffer = new IdentityHashMap[6];
+	
+	/* 返回刚好能够容纳所有矩形物体的一个矩形边框(二维区间树的大小) */
+	public boolean containerRect(Rect rect)
+	{
+		if(mObstacleCount > 0){
+			//所有矩形中最顶上的和最底下的边确定边框的上下边
+			//所有矩形中最左边的和最右边的边确定边框的左右边
+			rect.top = mTree.yPoints[0];
+			rect.bottom = mTree.yPoints[mTree.yPointCount - 1];
+			rect.left = mBounds.xPoints[0];
+			rect.right = mBounds.xPoints[mBounds.xPointCount - 1];
+			return true;
+		}
+		return false;
+	}
 
+	/* 截取二维区间树中指定范围的物体，并用这些物体创建一个新的二维区间树 */
+	public ObstacleRangeTree subContainer(int xStart, int xEnd, int yStart, int yEnd){
+		return new ObstacleRangeTree(this, xStart, xEnd, yStart, yEnd);
+	}
+	/* 设置物体范围过滤器，可以在添加前修改物体的范围 */
+	public void setFilters(ObstacleRectFilter[] filters){
+		if (filters == null) {
+            throw new IllegalArgumentException();
+        }
+		mFilters = filters;
+	}
+	/* 检查矩形范围是否合理 */
+	private static void checkBounds(int xStart, int xEnd, int yStart, int yEnd){
+		if(yStart >= yEnd || xStart >= xEnd){
+			throw new IndexOutOfBoundsException("bounds not a rect");
+		}
+	}
+	
 	//用一条扫描线从上往下扫，每遇到一个矩形的横边就将这条边的纵坐标记录下来
 	//用这个方法将所有矩形横边的纵坐标投影到y轴上，用这些有序坐标点构建一个点数组
 	//每两y点之间构成一个区间，区间内的数据存储在左边的点的下标处，有效区间数比点数少1，为了方便，将最后一个点置为空区间
@@ -190,10 +242,14 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 	//另外，按扫描线(矩形的边)分隔的区间，其中的物体必然填充整个区间
 	//因此搜索时仅需判断搜索范围是否与区间重叠，如果是则直接获取x区间内的所有物体
 	
-	private yTree mTree; //y轴区间树
+	private yTree mTree;   //y轴区间树，用于主要的所有操作
+	private xTree mBounds; //此x轴区间树只是临时用于存储矩形的点边界，无视即可
 	private int mObstacleCount; //容器内物体的个数
 	private IdentityHashMap<Obstacle, Rect> mRectOfObstacle; //物体在容器中的矩形范围
 
+	private ObstacleRectFilter[] mFilters;
+	private static final IdentityHashMap[] sCachedBuffer = new IdentityHashMap[6];
+	
 	
 	/* y轴区间树，实际上就是有序区间列表，也可以当成树遍历 */
 	private static class yTree implements Cloneable

@@ -13,13 +13,22 @@ public interface ObstacleContainer
 	
 	public int getObstacleCount();
 	
-	//public void containerRect(Rect rect)
+	public boolean containerRect(Rect rect);
 	
-	//public ObstacleContainer subContainer(int xStart, int xEnd, int yStart, int yEnd)
+	public ObstacleContainer subContainer(int xStart, int xEnd, int yStart, int yEnd);
 	
+	public void clear();
+	
+	public void setFilters(ObstacleRectFilter[] filter);
+	
+	
+	public static interface ObstacleRectFilter
+	{
+		public Obstacle filter(Obstacle obj, Rect rect);
+	}
 	
 	public static interface ObstacleContainerFactory
 	{
-		public ObstacleContainer newObstacleContainer()
+		public ObstacleContainer newObstacleContainer();
 	}
 }
