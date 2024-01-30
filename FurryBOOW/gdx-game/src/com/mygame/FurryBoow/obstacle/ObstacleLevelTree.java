@@ -1,9 +1,51 @@
 package com.mygame.FurryBoow.obstacle;
 import android.graphics.*;
+import com.mygame.FurryBoow.obstacle.ObstacleContainer.*;
 
 /* 按矩形物体的嵌套层次构建的树 */
 public class ObstacleLevelTree implements ObstacleContainer
 {
+
+	@Override
+	public boolean getObstacleBounds(Obstacle obj, Rect bounds)
+	{
+		// TODO: Implement this method
+		return false;
+	}
+
+	@Override
+	public boolean containerBounds(Rect bounds)
+	{
+		// TODO: Implement this method
+		return false;
+	}
+
+	@Override
+	public ObstacleContainer subContainer(int xStart, int xEnd, int yStart, int yEnd)
+	{
+		// TODO: Implement this method
+		return null;
+	}
+
+	@Override
+	public void clear()
+	{
+		// TODO: Implement this method
+	}
+
+	@Override
+	public void setFilters(ObstacleContainer.ObstacleBoundsFilter[] filter)
+	{
+		// TODO: Implement this method
+	}
+
+	@Override
+	public ObstacleContainer.ObstacleBoundsFilter[] getFilters()
+	{
+		// TODO: Implement this method
+		return null;
+	}
+	
 	public ObstacleLevelTree(ObstacleContainerFactory fa){
 		mRoot = new TreeNode();
 		mFactory = fa;
@@ -31,12 +73,6 @@ public class ObstacleLevelTree implements ObstacleContainer
 		return null;
 	}
 
-	@Override
-	public boolean getObstacleRect(Obstacle obj, Rect rect)
-	{
-		// TODO: Implement this method
-		return false;
-	}
 
 	@Override
 	public int getObstacleCount(){

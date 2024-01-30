@@ -9,22 +9,24 @@ public interface ObstacleContainer
 	
 	public Obstacle[] getObstacles(int xStart, int xEnd, int yStart, int yEnd);
 	
-	public boolean getObstacleRect(Obstacle obj, Rect rect);
+	public boolean getObstacleBounds(Obstacle obj, Rect bounds);
 	
 	public int getObstacleCount();
 	
-	public boolean containerRect(Rect rect);
+	public boolean containerBounds(Rect bounds);
 	
 	public ObstacleContainer subContainer(int xStart, int xEnd, int yStart, int yEnd);
 	
 	public void clear();
 	
-	public void setFilters(ObstacleRectFilter[] filter);
+	public void setFilters(ObstacleBoundsFilter[] filter);
+	
+	public ObstacleBoundsFilter[] getFilters();
 	
 	
-	public static interface ObstacleRectFilter
+	public static interface ObstacleBoundsFilter
 	{
-		public Obstacle filter(Obstacle obj, Rect rect);
+		public Obstacle filter(Obstacle obj, Rect bounds);
 	}
 	
 	public static interface ObstacleContainerFactory

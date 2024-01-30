@@ -100,4 +100,8 @@ public class MyGdxGame implements ApplicationListener
 		int left, top, right, bottom;
 		ShapeRenderer.ShapeType shapeType;
 	}
+	
+	public static int cast(int y){
+		return Gdx.graphics.getHeight() - y;
+	}
 }

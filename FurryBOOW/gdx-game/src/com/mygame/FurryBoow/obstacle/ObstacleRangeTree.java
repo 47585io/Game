@@ -24,7 +24,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		int[] yStarts = new int[length];
 		int[] yEnds = new int[length];
 		for(int i = 0; i < length; ++i){
-			container.getObstacleRect(objs[i], rect);
+			container.getObstacleBounds(objs[i], rect);
 			xStarts[i] = rect.left;
 			xEnds[i] = rect.right;
 			yStarts[i] = rect.top;
@@ -32,18 +32,22 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		}
 		buildTree(objs, xStarts, xEnds, yStarts, yEnds);
 	}
+	public ObstacleRangeTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds){
+		buildTree(objs, xStarts, xEnds, yStarts, yEnds);
+	}
 	
-	public static ObstacleRangeTree valueOf(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds){
-		return new ObstacleRangeTree().buildTree(objs, xStarts, xEnds, yStarts, yEnds);
+	/* 构建一颗空树 */
+	private void emptyTree(){
+		
 	}
 	/* 用许多矩形物体快速构建一颗二维区间树 */
-	private ObstacleRangeTree buildTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
+	private void buildTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
 	{
 		if(objs.length == 0){
 			mObstacleCount = 0;
 			mTree = new yTree();
 			mBounds = new xTree();
-			return this;
+			return ;
 		}
 		mObstacleCount = objs.length;
 		mRectOfObstacle = new IdentityHashMap<>(mObstacleCount * 2);
@@ -52,7 +56,6 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		}
 		mTree = new yTree(objs, xStarts, xEnds, yStarts, yEnds);
 		mBounds = new xTree(objs, xStarts, xEnds);
-		return this;
 	}
 	
 	/* 快速克隆一个新的二维区间树(深拷贝) */
@@ -64,6 +67,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 			return tree;
 		}
 		tree.mObstacleCount = mObstacleCount;
+		tree.mFilters = mFilters;
 		tree.mTree = mTree.clone();
 		tree.mBounds = mBounds.clone();
 		tree.mRectOfObstacle = (IdentityHashMap<Obstacle, Rect>) mRectOfObstacle.clone();
@@ -128,7 +132,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 	}
 
 	/* 获取指定物体的矩形范围，如果有则返回true */
-	public boolean getObstacleRect(Obstacle obj ,Rect rect)
+	public boolean getObstacleBounds(Obstacle obj, Rect rect)
 	{
 		if(mRectOfObstacle != null)
 		{
@@ -196,7 +200,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 	}
 	
 	/* 返回刚好能够容纳所有矩形物体的一个矩形边框(二维区间树的大小) */
-	public boolean containerRect(Rect rect)
+	public boolean containerBounds(Rect rect)
 	{
 		if(mObstacleCount > 0){
 			//所有矩形中最顶上的和最底下的边确定边框的上下边
@@ -209,18 +213,22 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		}
 		return false;
 	}
-
 	/* 截取二维区间树中指定范围的物体，并用这些物体创建一个新的二维区间树 */
 	public ObstacleRangeTree subContainer(int xStart, int xEnd, int yStart, int yEnd){
 		return new ObstacleRangeTree(this, xStart, xEnd, yStart, yEnd);
 	}
+	
 	/* 设置物体范围过滤器，可以在添加前修改物体的范围 */
-	public void setFilters(ObstacleRectFilter[] filters){
+	public void setFilters(ObstacleBoundsFilter[] filters){
 		if (filters == null) {
             throw new IllegalArgumentException();
         }
 		mFilters = filters;
 	}
+	public ObstacleBoundsFilter[] getFilters(){
+		return mFilters;
+	}
+	
 	/* 检查矩形范围是否合理 */
 	private static void checkBounds(int xStart, int xEnd, int yStart, int yEnd){
 		if(yStart >= yEnd || xStart >= xEnd){
@@ -247,7 +255,7 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 	private int mObstacleCount; //容器内物体的个数
 	private IdentityHashMap<Obstacle, Rect> mRectOfObstacle; //物体在容器中的矩形范围
 
-	private ObstacleRectFilter[] mFilters;
+	private ObstacleBoundsFilter[] mFilters = EmptyArray.emptyArray(ObstacleBoundsFilter.class);
 	private static final IdentityHashMap[] sCachedBuffer = new IdentityHashMap[6];
 	
 	
@@ -268,12 +276,17 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 		/* 用许多矩形物体快速构建一颗y轴区间树 */
 		public yTree(Obstacle[] objs, int[] xStarts, int[] xEnds, int[] yStarts, int[] yEnds)
 		{
-			//创建一个更大的数组来存储点
+			//创建一个更大的数组来存储点，growSize必然是偶数且>0，对于int来说就是对齐的
 			int objSize = objs.length;
 			int growSize = GrowingArrayUtils.growSize(objSize * 2);
 			yPoints = new int[growSize];
 			yPointOverlap = new int[growSize];
 			yRangeNodes = new xTree[growSize];
+			
+			if(objSize == 0){
+				yPointCount = 0;
+				return ;
+			}
 			//用yStarts和yEnds的点填充yPoints
 			System.arraycopy(yStarts, 0, yPoints, 0, objSize);
 			System.arraycopy(yEnds, 0, yPoints, objSize, objSize);
@@ -417,6 +430,11 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 			xPoints = new int[growSize];
 			xPointOverlap = new int[growSize];
 			xRangeObjs = new ObstacleLink[growSize];
+			
+			if(objSize == 0){
+				xPointCount = 0;
+				return ;
+			}
 			System.arraycopy(xStarts, 0, xPoints, 0, objSize);
 			System.arraycopy(xEnds, 0, xPoints, objSize, objSize);
 			xPointCount = checkPoints(xPoints, xPointOverlap, objSize * 2);
@@ -527,6 +545,9 @@ public class ObstacleRangeTree implements ObstacleContainer, Cloneable
 	/* 用指定的点构建区间列表，返回区间列表的长度，并记录每个点的重复次数 */
 	private static int checkPoints(int[] points, int[] pointOverlap, int pointCount)
 	{
+		if(pointCount == 0){
+			return 0;
+		}
 		//对points排序并去重，便构建了一个区间列表
 		Arrays.sort(points, 0, pointCount);
 		int remaining = pointCount;
