@@ -3,8 +3,8 @@ package com.mygame.FurryBoow.obstacle;
 import android.graphics.*;
 import java.util.*;
 import com.mygame.FurryBoow.array.*;
-import com.mygame.FurryBoow.obstacle.ObstacleContainer.*;
 
+/* 用于存储矩形，以及快速获取与指定查找范围重叠的所有矩形的区域树 */
 public class ObstacleRegionTree implements ObstacleContainer
 {
 	
@@ -76,8 +76,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 			return EmptyArray.emptyArray(Obstacle.class);
 		}
 		List<Obstacle> list = obtain();
-		Rect rect = new Rect(left, top, right, bottom);
-		mTree.getObjects(rect, list);
+		mTree.getObjects(left, top, right, bottom, list);
 		if(list.size() == 0){
 			recyle(list);
 			return EmptyArray.emptyArray(Obstacle.class);
@@ -148,7 +147,6 @@ public class ObstacleRegionTree implements ObstacleContainer
 		}
 	}
 	
-	
 	private RTree mTree;
 	private int mObstacleCount;
 	private IdentityHashMap<Obstacle, Rect> mRectOfObstacle;
@@ -157,12 +155,18 @@ public class ObstacleRegionTree implements ObstacleContainer
 	private static final List[] sCachedBuffer = new List[6];
 	
 	
+	/* 区域树中的节点分为内部节点(RTDirNode)，以及叶子节点(RTDataNode)，每一个节点都存储了一组的矩形条目
+	 * 只有叶子节点中存储的是真正的物体以及它们的矩形区域，内部节点存储的是它的子节点和包围子节点的外包矩形
+	 * 每一层的内部节点都将下一层节点的矩形分组，这样在查找时可以层层快速舍弃不在查找范围内的那些组
+	 * 如果查找范围真的命中了某些矩形，那么查找时需要走到最后一层的叶子来获取它，为了更快速地获取
+	 * 我们在插入时会维护树的平衡，将其均匀地分配给每个节点，使树的层次尽可能地少。在删除时，也会压缩树的层数
+	 */
 	private static class RTree
 	{
 		private RTNode mRoot; //根节点
 		private Rect mBound;  //根节点的外包矩形
-		private static final int NODE_CAPACITY = 5;
-		private static final int MIN_NODE_CAPACITY = 2;
+		private static final int NODE_CAPACITY = 4;     //每个节点的最大条目数
+		private static final int MIN_NODE_CAPACITY = 2; //每个节点的最小条目数
 		
 		public RTree(){
 			mRoot = new RTDataNode(this, null);
@@ -173,14 +177,36 @@ public class ObstacleRegionTree implements ObstacleContainer
 		public void setRoot(RTNode root){
 			mRoot = root;
 		}
-		/* 为指定的物体在树中分配一块矩形区域 */
+		
+		/* 为指定的物体在树中分配一块矩形区域 
+		 *
+		 *  1、首先找到与它最接近的节点(组)，并且层层这样寻找下去，直至叶子节点
+		 *
+		 *  2、将它插入叶子节点中，如果此时该节点矩形数超出了NODE_CAPACITY
+		 *     那么将这个节点分裂为两个节点，并加入父节点中
+		 *     如果父节点的矩形数也超出了NODE_CAPACIT，同样也需要这样做
+		 *
+		 *  3、重新计算修改节点的外包矩形
+		 *     将这种变化层层向上传递，重新计算插入路径上的每个节点的外包矩形
+		 *
+		 */
 		public void insert(Rect rect, Object obj)
 		{
 			RTDataNode node = mRoot.chooseLeaf(rect);
 			node.insert(rect, obj);
 			mBound = mRoot.getNodeRect();
 		}
-		/* 在树中移除指定的矩形，并移除区域内的物体 */
+		
+		/* 在树中移除指定的矩形，并移除区域内的物体 
+		 * 
+		 *  1、首先找到包含它的节点，并且层层这样寻找下去，直至叶子节点
+		 *
+		 *  2、从叶子节点中移除这个矩形，如果叶子节点中的矩形数太少
+		 *     需要删除这个叶子节点，并记录节点中的矩形
+		 *     如果父节点的矩形数也太少，同样也需要这样做
+		 *
+		 *  3、将这些矩形重新插入到树中
+		 */
 		public void delete(Rect rect, Object obj)
 		{
 			RTDataNode node = mRoot.findLeaf(rect, obj);
@@ -189,6 +215,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 			}
 			mBound = mRoot.getNodeRect();
 		}
+		
 		/* 从给定的结点开始遍历之下所有的叶子结点 */
 		public void foreachLeaves(RTNode node, List<RTDataNode> nodes)
 		{
@@ -201,20 +228,22 @@ public class ObstacleRegionTree implements ObstacleContainer
 				foreachLeaves(dirNode.children[i], nodes);
 			}
 		}
+		
 		/* 获取所有与指定范围重叠的物体 */
-		public void getObjects(Rect rect, List objs){
-			if(mBound.intersect(rect)){
-				getObjects(mRoot, rect, objs);
+		public void getObjects(int left, int top, int right, int bottom, List objs)
+		{
+			if(mBound.intersects(left, top, right, bottom)){
+				getObjects(left, top, right, bottom, mRoot, objs);
 			}
 		}
 		/* 从给定的节点开始获取所有与指定范围重叠的物体 */
-		private void getObjects(RTNode node, Rect rect, List objs)
+		private void getObjects(int left, int top, int right, int bottom, RTNode node, List objs)
 		{
 			if(node.level == 0){
 				//叶子节点则直接遍历它的条目，并获取与范围重叠的条目
 				RTDataNode leaf = (RTDataNode) node;
 				for(int i = 0; i < leaf.usedSpace; ++i){
-					if(leaf.bounds[i].intersect(rect)){
+					if(leaf.bounds[i].intersects(left, top, right, bottom)){
 						objs.add(leaf.dates[i]);
 					}
 				}
@@ -223,14 +252,15 @@ public class ObstacleRegionTree implements ObstacleContainer
 			RTDirNode dirNode = (RTDirNode) node;
 			//内部节点将遍历它的所有子节点
 			for(int i = 0; i < dirNode.usedSpace; ++i){
-				if(dirNode.bounds[i].intersect(rect)){
+				if(dirNode.bounds[i].intersects(left, top, right, bottom)){
 					//传递给函数的节点应先判断是否与查找范围重叠，因为它只判断自己的孩子而不是自己
-					getObjects(dirNode.children[i], rect, objs);
+					getObjects(left, top, right, bottom, dirNode.children[i], objs);
 				}
 			}
 		}
 	}
 	
+	/* 树的节点，此类申明了一些基础的内容 */
 	private static abstract class RTNode
 	{
 		protected RTree rTree;     //节点所在的树
@@ -426,7 +456,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 		}
 		
 		/* 返回包含结点中所有条目的最小Rect */
-		protected Rect getNodeRect(){
+		public Rect getNodeRect(){
 			return RectUtils.getUnionRect(bounds, usedSpace);
 		}
 		
@@ -437,9 +467,10 @@ public class ObstacleRegionTree implements ObstacleContainer
 		protected abstract RTDataNode findLeaf(Rect rect, Object tag);
 	}
 	
+	/* 内部节点 */
 	private static class RTDirNode extends RTNode
 	{
-		private RTNode[] children;
+		protected RTNode[] children; //子节点数组，每一个外包矩形对应的子节点
 		
 		public RTDirNode(RTree rtee, RTNode parent, int level){
 			super(rtee, parent, level);
@@ -540,21 +571,23 @@ public class ObstacleRegionTree implements ObstacleContainer
 			return sel;
 		}
 		
-		/* 分裂的叶子节点要插入到内部节点中 */
-		public void insert(RTNode node)
+		/* 分裂的节点要插入到内部节点中 */
+		protected void insert(RTNode node)
 		{
 			addEntry(node.getNodeRect(), node);
 			if(usedSpace <= RTree.NODE_CAPACITY){
+				//如果当前节点的容量足够，则不用分裂节点，直接调整树
 				if(parent != null){
 					((RTDirNode)parent).adjustTree(this, null);
 				}
 			}
-			else{
+			else{//节点容量不足，分裂节点，并将两个节点添加到父节点中
 				RTDirNode[] nodes = spiltIndex();
 				RTDirNode n1 = nodes[0];
 				RTDirNode n2 = nodes[1];
 				if(parent == null){
 					//当前节点是根节点，就创建一个新的根节点，并将它们添加到新根节点中
+					//此时整颗树的层数加1，根节点是最高的那一层
 					RTDirNode root = new RTDirNode(rTree, null, level + 1);
 					root.addEntry(n1.getNodeRect(), n1);
 					root.addEntry(n2.getNodeRect(), n2);
@@ -566,11 +599,11 @@ public class ObstacleRegionTree implements ObstacleContainer
 			}
 		}
 		
-		/* 插入新的Rect后从插入的叶节点开始向上调整RTree，直到根节点
+		/* 插入新的Rect后从插入的节点开始向上调整RTree，直到根节点
 		 * @param node1 引起需要调整的孩子结点
 		 * @param node2 分裂的结点，若未分裂则为null
 		 */
-		private void adjustTree(RTNode node1, RTNode node2)
+		public void adjustTree(RTNode node1, RTNode node2)
 		{
 			//先要找到指向原来旧的结点（即未分裂前）的条目的索引
 			//先用node1覆盖原来的结点，并重新计算它的外包矩形
@@ -590,12 +623,14 @@ public class ObstacleRegionTree implements ObstacleContainer
 		/* 将当前节点的内容分裂为两个 */
 		private RTDirNode[] spiltIndex()
 		{
+			//分裂的节点与当前节点在同一层，且即将把它们加入我的父节点中
 			RTDirNode node1 = new RTDirNode(rTree, parent, level);
 			RTDirNode node2 = new RTDirNode(rTree, parent, level);
 			int[][] group = quadraticSplit(bounds, usedSpace);
 			int[] group1 = group[0];
 			int[] group2 = group[1];
 			
+			//将矩形条目归为两组后，分别分配给两个节点
 			for(int i = 0; i < group1.length; ++i){
 				int index = group1[i];
 				node1.addEntry(bounds[index], children[index]);
@@ -624,9 +659,10 @@ public class ObstacleRegionTree implements ObstacleContainer
 		}
 	}
 	
+	/* 叶子节点 */
 	private static class RTDataNode extends RTNode
 	{
-		private Object[] dates;
+		protected Object[] dates; //每一个矩形对应的物体
 		
 		public RTDataNode(RTree rtee, RTNode parent){
 			super(rtee, parent, 0);
@@ -644,6 +680,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 			dates[--usedSpace] = null;
 		}
 		
+		/* 插入指定矩形且指定的物体 */
 		public void insert(Rect rect, Object data)
 		{
 			addEntry(rect, data); //先添加这个条目
