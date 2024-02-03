@@ -10,7 +10,7 @@ import com.mygame.FurryBoow.obstacle.*;
 public class MyGdxGame implements ApplicationListener
 {
 	ShapeRenderer mShapeRenderer;
-	ObstacleRangeTree mRangeTree;
+	ObstacleRegionTree mRangeTree;
 	
 	RectShaper[] mRectShapers;
 	RectShaper mBox;
@@ -18,7 +18,7 @@ public class MyGdxGame implements ApplicationListener
 	@Override
 	public void create()
 	{
-		mBox = new RectShaper();
+		mBox = new RectShaper(null, 0,0,0,0);
 		mRectShapers = new RectShaper[]{};
 		
 		int length = mRectShapers.length;
@@ -37,7 +37,7 @@ public class MyGdxGame implements ApplicationListener
 		}
 		
 		mShapeRenderer = new ShapeRenderer();
-		mRangeTree = new ObstacleRangeTree(objs, xStarts, xEnds, yStarts, yEnds);
+		mRangeTree = new ObstacleRegionTree();
 	}
 
 	@Override
