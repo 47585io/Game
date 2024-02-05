@@ -51,6 +51,8 @@ public class ObstacleRegionTree implements ObstacleContainer
 	/* 为指定的物体在区域树中分配一块矩形区域 */
 	public void addObstacle(Obstacle obj, int left, int top, int right, int bottom)
 	{
+		//检查边界
+		checkBounds(left, top, right, bottom);
 		if(mRectOfObstacle == null){
 			mRectOfObstacle = new IdentityHashMap<>();
 		}
