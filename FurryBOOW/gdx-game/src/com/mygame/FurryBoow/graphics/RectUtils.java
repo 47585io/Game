@@ -1,7 +1,7 @@
 package com.mygame.FurryBoow.graphics;
-import android.graphics.*;
+import android.graphics.Rect;
 
-public class RectUtils
+public final class RectUtils
 {
 	public static Rect getUnionRect(Rect r1, Rect r2)
 	{

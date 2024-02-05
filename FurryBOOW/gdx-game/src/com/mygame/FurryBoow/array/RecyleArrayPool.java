@@ -1,7 +1,8 @@
 package com.mygame.FurryBoow.array;
-import java.lang.reflect.*;
 
-public class RecyleArrayPool
+import java.lang.reflect.Array;
+
+public final class RecyleArrayPool
 {
 	private static final int ARRAY_SIZE = 6;
 	

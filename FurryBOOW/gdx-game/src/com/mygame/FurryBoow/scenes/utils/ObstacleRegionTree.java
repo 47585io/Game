@@ -1,10 +1,10 @@
 package com.mygame.FurryBoow.scenes.utils;
 
 import java.util.*;
-import android.graphics.*;
-import com.mygame.FurryBoow.array.*;
-import com.mygame.FurryBoow.obstacle.*;
-import com.mygame.FurryBoow.graphics.*;
+import android.graphics.Rect;
+import com.mygame.FurryBoow.array.EmptyArray;
+import com.mygame.FurryBoow.obstacle.Obstacle;
+import com.mygame.FurryBoow.graphics.RectUtils;
 
 
 /* 区域树的简单实现，用于存储矩形，以及快速获取与指定查找范围重叠的所有矩形 */

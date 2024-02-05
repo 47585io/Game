@@ -1,7 +1,5 @@
 package com.mygame.FurryBoow.array;
 
-import java.lang.annotation.*;
-
 public final class GrowingArrayUtils
 {
     /** 
@@ -210,4 +208,3 @@ public final class GrowingArrayUtils
 		return currentSize <= 4 ? 8 : currentSize * 2;
 	}
 }
-	

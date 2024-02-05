@@ -1,7 +1,7 @@
 package com.mygame.FurryBoow.scenes.utils;
 
-import android.graphics.*;
-import com.mygame.FurryBoow.obstacle.*;
+import android.graphics.Rect;
+import com.mygame.FurryBoow.obstacle.Obstacle;
 
 public interface ObstacleContainer
 {

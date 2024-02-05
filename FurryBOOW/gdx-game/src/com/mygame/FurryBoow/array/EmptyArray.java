@@ -1,8 +1,8 @@
 package com.mygame.FurryBoow.array;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
 
-public class EmptyArray
+public final class EmptyArray
 {
 	public static final Object[] OBJECT = new Object[0];
 

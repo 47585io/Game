@@ -1,6 +1,7 @@
 package com.mygame.FurryBoow.scenes;
+
 import com.mygame.FurryBoow.obstacle.*;
-import com.mygame.FurryBoow.scenes.utils.*;
+import com.mygame.FurryBoow.scenes.utils.ObstacleRegionTree;
 
 public class Scenes
 {

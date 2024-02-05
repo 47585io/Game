@@ -1,9 +1,9 @@
 package com.mygame.FurryBoow.array;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Array;
+import java.util.Objects;
 
-public class ArrayUtils
+public final class ArrayUtils
 {
 	private static final int ALIGNMENT_AMOUNT = 8;
 
