@@ -20,7 +20,7 @@ public class MyGdxGame implements ApplicationListener
 	@Override
 	public void create()
 	{ 
-		mBox = new RectShaper(0,0);
+		mBox = new RectShaper(0, 0, 50, 50);
 		mRectShapers = new RectShaper[]{
 			new RectShaper(100, 100),
 			new RectShaper(100, 200),
@@ -40,8 +40,6 @@ public class MyGdxGame implements ApplicationListener
 			RectShaper rs = mRectShapers[i];
 			mRegionTree.addObstacle(rs, rs.x, rs.y, rs.x+rs.width, rs.y+rs.height);
 		}
-		mRegionTree.removeObstacle(mRectShapers[0]);
-		mRegionTree.removeObstacle(mRectShapers[1]);
 		//mBox.color = Color.WHITE;
 	}
 
@@ -91,11 +89,19 @@ public class MyGdxGame implements ApplicationListener
 			height = 100;
 			color = Color.YELLOW;
 		}
-
+		public RectShaper(int x, int y, int w, int h){
+			super(null);
+			this.x = x;
+			this.y = y;
+			width = w;
+			height = h;
+			color = Color.YELLOW;
+		}
+		
 		@Override
 		public void draw(SpriteBatch spriteBatch, ShapeRenderer shapeRenderer){
 			shapeRenderer.setColor(color);
-			shapeRenderer.rect(x, cast(y), width, height);
+			shapeRenderer.rect(x, cast(y+height), width, height);
 		}
 		
 		public void move(int dx, int dy){
