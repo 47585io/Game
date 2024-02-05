@@ -10,6 +10,8 @@ import com.mygame.FurryBoow.graphics.RectUtils;
 /* 区域树的简单实现，用于存储矩形，以及快速获取与指定查找范围重叠的所有矩形 */
 public class ObstacleRegionTree implements ObstacleContainer
 {
+	private static final String TAG = "ObstacleRegionTree";
+	
 	/* 构建一颗空区域树 */
 	public ObstacleRegionTree(){
 		mObstacleCount = 0;
@@ -129,7 +131,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 	}
 	/* 获取区域树的大小，这个矩形大小刚好可以包围区域树中的所有物体 */
 	public void containerBounds(Rect bounds){
-		bounds.set(mTree.mBound);
+		bounds.set(mTree.mBounds);
 	}
 	/* 裁剪区域树中指定范围的物体(及它们的范围)，构建一颗新的区域树 */
 	public ObstacleContainer subContainer(int left, int top, int right, int bottom){
@@ -197,13 +199,13 @@ public class ObstacleRegionTree implements ObstacleContainer
 	private static class RTree
 	{
 		private RTNode mRoot; //根节点
-		private Rect mBound;  //根节点的外包矩形
+		private Rect mBounds;  //根节点的外包矩形
 		public static final int NODE_CAPACITY = 4;     //每个节点的最大条目数
 		public static final int MIN_NODE_CAPACITY = 2; //每个节点的最小条目数
 
 		public RTree(){
 			mRoot = new RTDataNode(this, null);
-			mBound = new Rect();
+			mBounds = new Rect();
 		}
 
 		/* 为树设置一个根节点 */
@@ -225,9 +227,9 @@ public class ObstacleRegionTree implements ObstacleContainer
 		 */
 		public void insert(Rect rect, Object obj)
 		{
-			RTDataNode node = mRoot.chooseLeaf(rect);
-			node.insert(rect, obj);
-			mBound = mRoot.getNodeRect();
+			RTDataNode leaf = mRoot.chooseLeaf(rect);
+			leaf.insert(rect, obj);
+			mBounds = mRoot.getNodeRect();
 		}
 
 		/* 在树中移除指定的矩形，并移除矩形对应的物体 
@@ -243,11 +245,11 @@ public class ObstacleRegionTree implements ObstacleContainer
 		 */
 		public void delete(Rect rect, Object obj)
 		{
-			RTDataNode node = mRoot.findLeaf(rect, obj);
-			if(node != null){
-				node.delete(rect, obj);
+			RTDataNode leaf = mRoot.findLeaf(rect, obj);
+			if(leaf != null){
+				leaf.delete(rect, obj);
 			}
-			mBound = mRoot.getNodeRect();
+			mBounds = mRoot.getNodeRect();
 		}
 
 		/* 从给定的结点开始遍历之下所有的叶子结点 */
@@ -257,16 +259,16 @@ public class ObstacleRegionTree implements ObstacleContainer
 				nodes.add((RTDataNode)node);
 				return;
 			}
-			RTDirNode dirNode = (RTDirNode) node;
-			for(int i = 0; i < dirNode.usedSpace; ++i){
-				foreachLeaves(dirNode.children[i], nodes);
+			RTDirNode dir = (RTDirNode) node;
+			for(int i = 0; i < dir.usedSpace; ++i){
+				foreachLeaves(dir.children[i], nodes);
 			}
 		}
 
 		/* 获取所有与指定范围重叠的物体 */
 		public void getObjects(int left, int top, int right, int bottom, List objs)
 		{
-			if(mBound.intersects(left, top, right, bottom)){
+			if(mBounds.intersects(left, top, right, bottom)){
 				getObjects(left, top, right, bottom, mRoot, objs);
 			}
 		}
@@ -283,12 +285,12 @@ public class ObstacleRegionTree implements ObstacleContainer
 				}
 				return;
 			}
-			RTDirNode dirNode = (RTDirNode) node;
 			//内部节点将遍历它的所有子节点
-			for(int i = 0; i < dirNode.usedSpace; ++i){
-				if(dirNode.bounds[i].intersects(left, top, right, bottom)){
+			RTDirNode dir = (RTDirNode) node;
+			for(int i = 0; i < dir.usedSpace; ++i){
+				if(dir.bounds[i].intersects(left, top, right, bottom)){
 					//传递给函数的节点应先判断是否与查找范围重叠，因为它只判断自己的孩子而不是自己
-					getObjects(left, top, right, bottom, dirNode.children[i], objs);
+					getObjects(left, top, right, bottom, dir.children[i], objs);
 				}
 			}
 		}
@@ -329,8 +331,8 @@ public class ObstacleRegionTree implements ObstacleContainer
 		}
 
 		/* 叶子节点中刚刚删除了一个条目，如果叶子节点中的剩余条目数太少
-		 需要删除这个叶子节点，同时收集该结点，之后将收集的节点中剩余的条目重插入到其他结点中
-		 如果有必要，要逐级向上进行这种删除，调整向上传递的路径上的所有外包矩形，使其尽可能小，直到根节点
+		 * 需要删除这个叶子节点，同时收集该结点，之后将收集的节点中剩余的条目重插入到其他结点中
+		 * 如果有必要，要逐级向上进行这种删除，调整向上传递的路径上的所有外包矩形，使其尽可能小，直到根节点
 		 */
 		protected void condenseTree(List<RTDataNode> list)
 		{
@@ -346,6 +348,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 			}
 			else{
 				//当前节点不是根节点，处理自己后继续向上传递
+				RTNode parent = this.parent;
 				int min = RTree.MIN_NODE_CAPACITY; 
 				if (usedSpace < min){
 					//如果当前节点的条目小于MIN_NODE_CAPACITY，则将它从父节点中移除
@@ -681,7 +684,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 		{
 			for (int i = 0; i < usedSpace; i++) {
 				if (bounds[i].contains(rect)) {
-					//如果该子节点包含此矩形，那么递归搜索它的子节点
+					//如果该子节点包含此矩形，那么递归搜索它的条目
 					deleteIndex = i;//记录搜索路径
 					RTDataNode leaf = children[i].findLeaf(rect, tag);
 					//找到了就直接返回叶子节点，没找到就尝试下个子节点
@@ -780,6 +783,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 		}
 
 		protected RTDataNode chooseLeaf(Rect rect){
+			//已经选择到叶子了
 			insertIndex = usedSpace;
 			return this;
 		}
@@ -788,6 +792,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 			for(int i = 0; i < usedSpace; ++i){
 				if(dates[i] == tag){
 					//叶子节点中，只需要比较两个物体是否相同
+					//如果找到了则返回叶子本身，否则返回null
 					deleteIndex = i;
 					return this;
 				}
@@ -795,5 +800,4 @@ public class ObstacleRegionTree implements ObstacleContainer
 			return null;
 		}
 	}
-	
 }

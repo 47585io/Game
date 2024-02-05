@@ -20,16 +20,29 @@ public class MyGdxGame implements ApplicationListener
 	@Override
 	public void create()
 	{ 
-		mBox = new RectShaper(null, 0,0,100,100);
-		mRectShapers = new RectShaper[]{};
+		mBox = new RectShaper(0,0);
+		mRectShapers = new RectShaper[]{
+			new RectShaper(100, 100),
+			new RectShaper(100, 200),
+			new RectShaper(100, 300),
+			new RectShaper(100, 400),
+			new RectShaper(100, 500),
+			new RectShaper(100, 600),
+			new RectShaper(100, 700),
+			new RectShaper(100, 800),
+			new RectShaper(100, 900),
+			new RectShaper(100, 1000),
+		};
 		mShapeRenderer = new ShapeRenderer();
 		mRegionTree = new ObstacleRegionTree();
 		
 		for(int i = 0; i < mRectShapers.length; ++i){
 			RectShaper rs = mRectShapers[i];
-			//mRegionTree.addObstacle(rs, rs.left, rs.top, rs.right, rs.bottom);
+			mRegionTree.addObstacle(rs, rs.x, rs.y, rs.x+rs.width, rs.y+rs.height);
 		}
-		mBox.shapeType = ShapeRenderer.ShapeType.Line;
+		mRegionTree.removeObstacle(mRectShapers[0]);
+		mRegionTree.removeObstacle(mRectShapers[1]);
+		//mBox.color = Color.WHITE;
 	}
 
 	@Override
@@ -40,15 +53,15 @@ public class MyGdxGame implements ApplicationListener
 			int dy = Gdx.input.getDeltaY();
 			mBox.move(dx, dy);
 		}
-		/*
-	    Obstacle[] objs = mRegionTree.getObstacles(mBox.left, mBox.right, mBox.top, mBox.bottom);
+		
+	    Obstacle[] objs = mRegionTree.getObstacles(mBox.x, mBox.y, mBox.x+mBox.width, mBox.y+mBox.height);
 		for(int i = 0; i < objs.length; ++i){
-			((RectShaper)objs[i]).shapeType = ShapeRenderer.ShapeType.Line;
-		}*/
+			((RectShaper)objs[i]).color = Color.GREEN;
+		}
 		mShapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 		for(int i = 0; i < mRectShapers.length; ++i){
 			mRectShapers[i].draw(null, mShapeRenderer);
-			mRectShapers[i].shapeType = ShapeRenderer.ShapeType.Filled;
+			mRectShapers[i].color = Color.YELLOW;
 		}
 		mBox.draw(null, mShapeRenderer);
 		mShapeRenderer.end();
@@ -70,30 +83,28 @@ public class MyGdxGame implements ApplicationListener
 	
 	static class RectShaper extends Obstacle
 	{
-		public RectShaper(Scenes map, int l, int t, int r, int b){
-			super(map);
-			left = l;
-			top = t;
-			right = r;
-			bottom = b;
+		public RectShaper(int x, int y){
+			super(null);
+			this.x = x;
+			this.y = y;
+			width = 100;
+			height = 100;
+			color = Color.YELLOW;
 		}
 
 		@Override
 		public void draw(SpriteBatch spriteBatch, ShapeRenderer shapeRenderer){
-			//shapeRenderer.set(shapeType);
-			//shapeRenderer.setColor(Color.YELLOW);
-			shapeRenderer.rect(left, cast(top), right-left, bottom-top);
+			shapeRenderer.setColor(color);
+			shapeRenderer.rect(x, cast(y), width, height);
 		}
 		
 		public void move(int dx, int dy){
-			left += dx;
-			right += dx;
-			top += dy;
-			bottom += dy;
+			x += dx;
+			y += dy;
 		}
 		
-		int left, top, right, bottom;
-		ShapeRenderer.ShapeType shapeType;
+		Color color;
+		int x, y, width, height;
 	}
 	
 	public static int cast(int y){
