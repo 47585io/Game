@@ -132,7 +132,7 @@ public class RecyleArrayPool
 			Object cache = sCachedArray[bucket];
 			if (cache == null || cache.getClass().getComponentType().getComponentType() != kind) {
 				//第一次获取，或者键计算冲突，则新创建一个
-				cache = Array.newInstance(kind, 6, 0);
+				cache = Array.newInstance(kind, ARRAY_SIZE, 0);
 				sCachedArray[bucket] = cache;
 			}
 			T[][] cacheArray = (T[][]) cache;

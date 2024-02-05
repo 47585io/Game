@@ -5,79 +5,68 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.glutils.*;
 import com.mygame.FurryBoow.obstacle.*;
+import com.mygame.FurryBoow.scenes.*;
+import com.mygame.FurryBoow.scenes.utils.*;
 
 
 public class MyGdxGame implements ApplicationListener
 {
 	ShapeRenderer mShapeRenderer;
-	ObstacleRegionTree mRangeTree;
+	ObstacleRegionTree mRegionTree;
 	
 	RectShaper[] mRectShapers;
 	RectShaper mBox;
 	
 	@Override
 	public void create()
-	{
-		mBox = new RectShaper(null, 0,0,0,0);
+	{ 
+		mBox = new RectShaper(null, 0,0,100,100);
 		mRectShapers = new RectShaper[]{};
-		
-		int length = mRectShapers.length;
-		Obstacle[] objs = new Obstacle[length];
-		int[] xStarts = new int[length];
-		int[] xEnds = new int[length];
-		int[] yStarts = new int[length];
-		int[] yEnds = new int[length];
-		for(int i = 0; i < length; ++i){
-			RectShaper rect = mRectShapers[i];
-			objs[i] = rect;
-			xStarts[i] = rect.left;
-			xEnds[i] = rect.right;
-			yStarts[i] = rect.top;
-			yEnds[i] = rect.bottom;
-		}
-		
 		mShapeRenderer = new ShapeRenderer();
-		mRangeTree = new ObstacleRegionTree();
+		mRegionTree = new ObstacleRegionTree();
+		
+		for(int i = 0; i < mRectShapers.length; ++i){
+			RectShaper rs = mRectShapers[i];
+			//mRegionTree.addObstacle(rs, rs.left, rs.top, rs.right, rs.bottom);
+		}
+		mBox.shapeType = ShapeRenderer.ShapeType.Line;
 	}
 
 	@Override
 	public void render()
 	{
 		if(Gdx.input.isTouched()){
-			int x = Gdx.input.getX();
-			int y = Gdx.input.getY();
+			int dx = Gdx.input.getDeltaX();
+			int dy = Gdx.input.getDeltaY();
+			mBox.move(dx, dy);
 		}
-		
-	    Obstacle[] objs = mRangeTree.getObstacles(mBox.left, mBox.right, mBox.top, mBox.bottom);
+		/*
+	    Obstacle[] objs = mRegionTree.getObstacles(mBox.left, mBox.right, mBox.top, mBox.bottom);
 		for(int i = 0; i < objs.length; ++i){
 			((RectShaper)objs[i]).shapeType = ShapeRenderer.ShapeType.Line;
-		}
-		mShapeRenderer.begin();
+		}*/
+		mShapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 		for(int i = 0; i < mRectShapers.length; ++i){
 			mRectShapers[i].draw(null, mShapeRenderer);
+			mRectShapers[i].shapeType = ShapeRenderer.ShapeType.Filled;
 		}
+		mBox.draw(null, mShapeRenderer);
 		mShapeRenderer.end();
 	}
 
 	@Override
-	public void dispose()
-	{
+	public void dispose(){
+		mShapeRenderer.dispose();
 	}
 
 	@Override
-	public void resize(int width, int height)
-	{
-	}
+	public void resize(int width, int height){}
 
 	@Override
-	public void pause()
-	{
-	}
+	public void pause(){}
 
 	@Override
-	public void resume()
-	{
-	}
+	public void resume(){}
 	
 	static class RectShaper extends Obstacle
 	{
@@ -91,10 +80,16 @@ public class MyGdxGame implements ApplicationListener
 
 		@Override
 		public void draw(SpriteBatch spriteBatch, ShapeRenderer shapeRenderer){
-			shapeRenderer.set(shapeType);
-			shapeRenderer.setColor(Color.YELLOW);
-			shapeRenderer.rect(left, top, right-left, bottom-top);
-			shapeType = ShapeRenderer.ShapeType.Filled;
+			//shapeRenderer.set(shapeType);
+			//shapeRenderer.setColor(Color.YELLOW);
+			shapeRenderer.rect(left, cast(top), right-left, bottom-top);
+		}
+		
+		public void move(int dx, int dy){
+			left += dx;
+			right += dx;
+			top += dy;
+			bottom += dy;
 		}
 		
 		int left, top, right, bottom;

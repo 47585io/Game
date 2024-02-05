@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.glutils.*;
 import com.badlogic.gdx.*;
 import android.graphics.*;
+import com.mygame.FurryBoow.scenes.*;
 
 public class Obstacle 
 {
