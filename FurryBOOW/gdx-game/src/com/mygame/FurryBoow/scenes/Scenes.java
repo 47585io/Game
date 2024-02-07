@@ -5,13 +5,50 @@ import com.mygame.FurryBoow.scenes.utils.ObstacleRegionTree;
 import android.graphics.Rect;
 import java.util.*;
 import com.mygame.FurryBoow.array.*;
+import com.mygame.FurryBoow.scenes.utils.*;
+import com.mygame.FurryBoow.scenes.utils.ObstacleContainer.ObstacleBoundsFilter;
 
 public class Scenes
 {
 	public Scenes(){
-		
+		mBounds = new Rect();
+		mCubeSize = new CubeSize();
+		mStaticObstacles = new ObstacleRegionTree();
+		mStaticObstacles.setFilters(new ObstacleBoundsFilter[]{new StaticBounds()});
 	}
 	
+	public void initCube(int left, int top, int right, int bottom,
+	                      int wStart, int wEnd, int hStart, int hEnd, int spacing, Obstacle[] objs)
+	{
+		mStaticObstacles.clear();
+		mBounds.set(left, top, right, bottom);
+		mCubeSize.set(wStart, wEnd, hStart, hEnd, spacing);
+		Rect rect = new Rect();
+		for(int i = 0; i < objs.length; ++i){
+			nextRandCube(rect);
+			mStaticObstacles.addObstacle(objs[i], rect.left, rect.top, rect.right, rect.bottom);
+		}
+	}
+	private void nextRandCube(Rect rect)
+	{
+		Obstacle[] objs;
+		final int spacing = mCubeSize.spacing;
+		do{
+		    rect.left = rand(mBounds.left, mBounds.right);
+		    rect.top = rand(mBounds.top, mBounds.bottom);
+		    rect.right = rect.left + rand(mCubeSize.wStart, mCubeSize.wEnd);
+		    rect.bottom = rect.top + rand(mCubeSize.hStart, mCubeSize.hEnd);
+		    objs = mStaticObstacles.getObstacles(rect.left-spacing, rect.top-spacing, rect.right+spacing, rect.bottom+spacing);
+		}
+		while(objs.length > 0);
+	} 
+	private static int rand(int a, int b){
+		return mRand.nextInt(b - a + 1) + a;
+	}
+	
+	public ObstacleContainer getContainer(){
+		return mStaticObstacles;
+	}
 	public void add(int f){}
 	public void remove(){}
 	
@@ -67,11 +104,42 @@ public class Scenes
 	private Obstacle[] mMoveObstacles;           //不会增删但会移动的物体集合
 	private Link<Obstacle> mDynamicObstacles;    //位置会移动并且还经常增删的物体集合
 	
+	private Rect mBounds;
+	private CubeSize mCubeSize;
+	
 	public static final int StaticObstacles = 0;
 	public static final int DynamicObstacles = 1;
+	private static final Random mRand = new Random();
 	
 	private static class Link<T>{
 		public T obj;
 		public Link<T> next;
+	}
+	
+	private static class CubeSize
+	{
+		private int wStart, wEnd;
+		private int hStart, hEnd;
+		private int spacing;
+		
+		public CubeSize(){}
+		public CubeSize(int ws, int we, int hs, int he, int sp){
+			set(ws, we, hs, he, sp);
+		}
+		
+		public void set(int ws, int we, int hs, int he, int sp){
+			wStart = ws;
+			wEnd = we;
+			hStart = hs;
+			hEnd = he;
+			spacing = sp;
+		}
+	}
+	
+	private class StaticBounds implements ObstacleBoundsFilter
+	{
+		public void filter(Obstacle obj, Rect bounds){
+			bounds.intersect(mBounds);
+		}
 	}
 }

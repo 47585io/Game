@@ -133,7 +133,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 	}
 	/* 获取区域树的大小，这个矩形大小刚好可以包围区域树中的所有物体 */
 	public void containerBounds(Rect bounds){
-		bounds.set(mTree.mBounds);
+		mTree.treeBounds(bounds);
 	}
 	/* 裁剪区域树中指定范围的物体(及它们的范围)，构建一颗新的区域树 */
 	public ObstacleContainer subContainer(int left, int top, int right, int bottom){
@@ -141,7 +141,11 @@ public class ObstacleRegionTree implements ObstacleContainer
 	}
 
 	/* 设置物体边界过滤器 */
-	public void setFilters(ObstacleBoundsFilter[] filters){
+	public void setFilters(ObstacleBoundsFilter[] filters)
+	{
+		if (filters == null) {
+            throw new IllegalArgumentException();
+        }
 		mFilters = filters;
 	}
 	public ObstacleBoundsFilter[] getFilters(){
@@ -201,7 +205,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 	private static class RTree
 	{
 		private RTNode mRoot; //根节点
-		private Rect mBounds;  //根节点的外包矩形
+		private Rect mBounds; //根节点的外包矩形
 		public static final int NODE_CAPACITY = 4;     //每个节点的最大条目数
 		public static final int MIN_NODE_CAPACITY = 2; //每个节点的最小条目数
 
@@ -213,6 +217,10 @@ public class ObstacleRegionTree implements ObstacleContainer
 		/* 为树设置一个根节点 */
 		public void setRoot(RTNode root){
 			mRoot = root;
+		}
+		/* 获取树的外包矩形 */
+		public void treeBounds(Rect bounds){
+			bounds.set(mBounds);
 		}
 
 		/* 为指定的物体在树中分配一块矩形区域 
@@ -250,8 +258,8 @@ public class ObstacleRegionTree implements ObstacleContainer
 			RTDataNode leaf = mRoot.findLeaf(rect, obj);
 			if(leaf != null){
 				leaf.delete(rect, obj);
+				mBounds = mRoot.getNodeRect();
 			}
-			mBounds = mRoot.getNodeRect();
 		}
 
 		/* 从给定的结点开始遍历之下所有的叶子结点 */
@@ -476,13 +484,11 @@ public class ObstacleRegionTree implements ObstacleContainer
 		{
 			int inefficiency = Integer.MIN_VALUE;
 			int i1 = 0, i2 = 0;
-			Rect unionRect = new Rect();
 			for(int i = 0; i < count; ++i){
 				int iArea = RectUtils.getArea(rects[i]);
 				for(int j = i + 1; j < count; ++j)
 				{
-					unionRect.set(rects[i]);
-					unionRect.union(rects[j]);
+					Rect unionRect = RectUtils.getUnionRect(rects[i], rects[j]);
 					int diff = RectUtils.getArea(unionRect) - iArea - RectUtils.getArea(rects[j]);
 					if(diff > inefficiency){
 						inefficiency = diff;
@@ -750,7 +756,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 		public void delete(Rect rect, Object data)
 		{
 			removeEntry(deleteIndex); //刚刚已经找到了，直接删除即可
-			List<RTDataNode> deleteEntriesList = new ArrayList<>();
+			List<RTDataNode> deleteEntriesList = obtain();
 			condenseTree(deleteEntriesList); 
 
 			//重新插入删除结点中剩余的条目
@@ -762,6 +768,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 					rTree.insert(leaf.bounds[k], leaf.dates[k]);
 				}
 			}
+			recyle(deleteEntriesList);
 		}
 
 		/* 将当前节点的内容分裂为两个 */

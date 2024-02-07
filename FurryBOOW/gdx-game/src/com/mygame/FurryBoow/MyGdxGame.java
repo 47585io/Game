@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.glutils.*;
 import com.mygame.FurryBoow.obstacle.*;
 import com.mygame.FurryBoow.scenes.*;
 import com.mygame.FurryBoow.scenes.utils.*;
+import android.graphics.Rect;
 
 
 public class MyGdxGame implements ApplicationListener
@@ -32,15 +33,30 @@ public class MyGdxGame implements ApplicationListener
 			new RectShaper(100, 800),
 			new RectShaper(100, 900),
 			new RectShaper(100, 1000),
+			new RectShaper(100, 100),
+			new RectShaper(100, 200),
+			new RectShaper(100, 300),
+			new RectShaper(100, 400),
+			new RectShaper(100, 500),
+			new RectShaper(100, 600),
+			new RectShaper(100, 700),
+			new RectShaper(100, 800),
+			new RectShaper(100, 900),
+			new RectShaper(100, 1000),
 		};
 		mShapeRenderer = new ShapeRenderer();
-		mRegionTree = new ObstacleRegionTree();
+		Scenes map = new Scenes();
+		map.initCube(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 
+		             50, 100, 50, 100, 50, mRectShapers);
+		mRegionTree = (ObstacleRegionTree) map.getContainer();
 		
+		Rect rect = new Rect();
 		for(int i = 0; i < mRectShapers.length; ++i){
 			RectShaper rs = mRectShapers[i];
-			mRegionTree.addObstacle(rs, rs.x, rs.y, rs.x+rs.width, rs.y+rs.height);
+			mRegionTree.getObstacleBounds(rs, rect);
+			rs.set(rect);
 		}
-		//mBox.color = Color.WHITE;
+		mBox.color = Color.BLUE;
 	}
 
 	@Override
@@ -59,7 +75,7 @@ public class MyGdxGame implements ApplicationListener
 		mShapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 		for(int i = 0; i < mRectShapers.length; ++i){
 			mRectShapers[i].draw(null, mShapeRenderer);
-			mRectShapers[i].color = Color.YELLOW;
+			mRectShapers[i].color = Color.RED;
 		}
 		mBox.draw(null, mShapeRenderer);
 		mShapeRenderer.end();
@@ -81,13 +97,16 @@ public class MyGdxGame implements ApplicationListener
 	
 	static class RectShaper extends Obstacle
 	{
+		public RectShaper(){
+			super(null);
+		}
 		public RectShaper(int x, int y){
 			super(null);
 			this.x = x;
 			this.y = y;
 			width = 100;
 			height = 100;
-			color = Color.YELLOW;
+			color = Color.RED;
 		}
 		public RectShaper(int x, int y, int w, int h){
 			super(null);
@@ -95,7 +114,7 @@ public class MyGdxGame implements ApplicationListener
 			this.y = y;
 			width = w;
 			height = h;
-			color = Color.YELLOW;
+			color = Color.RED;
 		}
 		
 		@Override
@@ -103,7 +122,15 @@ public class MyGdxGame implements ApplicationListener
 			shapeRenderer.setColor(color);
 			shapeRenderer.rect(x, cast(y+height), width, height);
 		}
-		
+		public void set(Rect rect){
+			set(rect.left, rect.top, rect.right-rect.left, rect.bottom-rect.top);
+		}
+		public void set(int x, int y, int w, int h){
+			this.x = x;
+			this.y = y;
+			width = w;
+			height = h;
+		}
 		public void move(int dx, int dy){
 			x += dx;
 			y += dy;
@@ -113,7 +140,7 @@ public class MyGdxGame implements ApplicationListener
 		int x, y, width, height;
 	}
 	
-	public static int cast(int y){
+	public static final int cast(int y){
 		return Gdx.graphics.getHeight() - y;
 	}
 }
