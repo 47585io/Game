@@ -8,9 +8,11 @@ import com.mygame.FurryBoow.scenes.*;
 
 public class Obstacle 
 {
-	private int flags;
+	private int mPrivateFlags;
 	private Scenes mScenes; //物体所在的场景
+	private Rect mBounds;   //物体的外包矩形
 	private Region mRegion; //物体的区域
+	private int mOffsetx, mOffsety; //物体的位置相较于原来的位置偏移
 	
 	public Obstacle(Scenes map){
 		mScenes = map;
@@ -21,7 +23,7 @@ public class Obstacle
 	
 	/* 物体的外包矩形，用于快速判断 */
 	public void getRect(Rect rect){
-		mRegion.getBounds(rect);
+		rect.set(mBounds);
 	}
 	/* 物体的图形区域，用于精确判断 */
 	public Region getRegion(){

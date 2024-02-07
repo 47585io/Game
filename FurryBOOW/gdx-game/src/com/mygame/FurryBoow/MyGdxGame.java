@@ -33,6 +33,16 @@ public class MyGdxGame implements ApplicationListener
 			new RectShaper(100, 800),
 			new RectShaper(100, 900),
 			new RectShaper(100, 1000),
+			new RectShaper(100, 1100),
+			new RectShaper(100, 1200),
+			new RectShaper(100, 1300),
+			new RectShaper(100, 1400),
+			new RectShaper(100, 1500),
+			new RectShaper(100, 1600),
+			new RectShaper(100, 1700),
+			new RectShaper(100, 1800),
+			new RectShaper(100, 1900),
+			new RectShaper(100, 2000),
 			new RectShaper(100, 100),
 			new RectShaper(100, 200),
 			new RectShaper(100, 300),
@@ -43,8 +53,60 @@ public class MyGdxGame implements ApplicationListener
 			new RectShaper(100, 800),
 			new RectShaper(100, 900),
 			new RectShaper(100, 1000),
+			new RectShaper(100, 1100),
+			new RectShaper(100, 1200),
+			new RectShaper(100, 1300),
+			new RectShaper(100, 1400),
+			new RectShaper(100, 1500),
+			new RectShaper(100, 1600),
+			new RectShaper(100, 1700),
+			new RectShaper(100, 1800),
+			new RectShaper(100, 1900),
+			new RectShaper(100, 2000),
+			new RectShaper(100, 100),
+			new RectShaper(100, 200),
+			new RectShaper(100, 300),
+			new RectShaper(100, 400),
+			new RectShaper(100, 500),
+			new RectShaper(100, 600),
+			new RectShaper(100, 700),
+			new RectShaper(100, 800),
+			new RectShaper(100, 900),
+			new RectShaper(100, 1000),
+			new RectShaper(100, 1100),
+			new RectShaper(100, 1200),
+			new RectShaper(100, 1300),
+			new RectShaper(100, 1400),
+			new RectShaper(100, 1500),
+			new RectShaper(100, 1600),
+			new RectShaper(100, 1700),
+			new RectShaper(100, 1800),
+			new RectShaper(100, 1900),
+			new RectShaper(100, 2000),
+			new RectShaper(100, 100),
+			new RectShaper(100, 200),
+			new RectShaper(100, 300),
+			new RectShaper(100, 400),
+			new RectShaper(100, 500),
+			new RectShaper(100, 600),
+			new RectShaper(100, 700),
+			new RectShaper(100, 800),
+			new RectShaper(100, 900),
+			new RectShaper(100, 1000),
+			new RectShaper(100, 1100),
+			new RectShaper(100, 1200),
+			new RectShaper(100, 1300),
+			new RectShaper(100, 1400),
+			new RectShaper(100, 1500),
+			new RectShaper(100, 1600),
+			new RectShaper(100, 1700),
+			new RectShaper(100, 1800),
+			new RectShaper(100, 1900),
+			new RectShaper(100, 2000),
 		};
 		mShapeRenderer = new ShapeRenderer();
+		
+		
 		Scenes map = new Scenes();
 		map.initCube(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 
 		             50, 100, 50, 100, 50, mRectShapers);
@@ -56,6 +118,15 @@ public class MyGdxGame implements ApplicationListener
 			mRegionTree.getObstacleBounds(rs, rect);
 			rs.set(rect);
 		}
+		
+		/*
+		mRegionTree = new ObstacleRegionTree();
+
+		for(int i = 0; i < mRectShapers.length; ++i){
+			RectShaper rs = mRectShapers[i];
+			mRegionTree.addObstacle(rs, rs.x, rs.y, rs.x+rs.width, rs.y+rs.height);
+		}*/
+		
 		mBox.color = Color.BLUE;
 	}
 
