@@ -36,7 +36,7 @@ public final class RecyleArrayPool
 	{
 		synchronized (sCharArrays)
 		{
-			for (int i = 0; i<sCharArrays.length; i++) 
+			for (int i = 0; i < sCharArrays.length; i++) 
 			{
 				if (sCharArrays[i] == null || array.length > sCharArrays[i].length) {
 					sCharArrays[i] = array;
@@ -137,7 +137,7 @@ public final class RecyleArrayPool
 				sCachedArray[bucket] = cache;
 			}
 			T[][] cacheArray = (T[][]) cache;
-			for (int i = 0;i < cacheArray.length;i++) 
+			for (int i = 0; i < cacheArray.length; i++) 
 			{
 				if (cacheArray[i] == null || array.length > cacheArray[i].length) {
 					cacheArray[i] = array;

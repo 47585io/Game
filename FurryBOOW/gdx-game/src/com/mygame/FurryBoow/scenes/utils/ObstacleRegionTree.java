@@ -541,11 +541,13 @@ public class ObstacleRegionTree implements ObstacleContainer
 		{
 			int index;
 			if(level == 1){
-				//对于叶子节点，获得最小重叠面积的叶子节点的索引
+				//如果孩子是叶子节点，获得最小重叠面积的叶子节点的索引
 				//因为叶子节点的面积增量其实不是很重要，本身就是最后一层了
+				//另一方面，这可以让叶子节点中的矩形不会特别拥挤，方便之后分裂两个节点(不会重叠太多)
 				index = findLeastOverlap(rect);
 			}else{
 				//对于内部节点，获得面积增量最小的子节点的索引
+				//这表示矩形离该组更近
 				index = findLeastEnlargement(rect);
 			}
 			insertIndex = index; //记录插入路径
