@@ -31,4 +31,3 @@ public final class RectUtils
 		return 0;
 	}
 }
-

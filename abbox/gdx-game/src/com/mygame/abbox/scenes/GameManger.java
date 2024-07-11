@@ -2,11 +2,12 @@ package com.mygame.abbox.scenes;
 
 import android.graphics.*;
 import com.mygame.abbox.obstacle.*;
+import com.mygame.abbox.obstacle.ObstacleGroup.*;
 import com.mygame.abbox.scenes.widget.*;
 import java.util.*;
 import com.badlogic.gdx.scenes.scene2d.*;
 
-public class GameManger implements ObstacleGroup.CollisionCallback
+public class GameManger implements CollisionCallback, ObstacleWatcher
 {
 	public GameManger(Scenes scenes){
 		mScenes = scenes;
@@ -94,13 +95,38 @@ public class GameManger implements ObstacleGroup.CollisionCallback
 	private static int rand(int a, int b){
 		return mRand.nextInt(b - a + 1) + a;
 	}
+	
+	/* 到自己发射炸弹的回合 */
+	private void onSelfRound(){
+		self.requestFocus();
+		self.setInputDuration(0);
+		self.updateBuffs(1);
+	}
 
-	public void onCollision(Obstacle target, Obstacle other){
+	public void onCollision(Obstacle target, Obstacle other)
+	{
 		target.onCollision(other);
 		//物体可以处理的东西自己处理
 		//不能处理在这里处理，比如全局buff
-		
-		InputEvent v;
+	}
+
+	public void onObstacleAdded(Obstacle obj)
+	{
+		if(obj instanceof Bomb){
+			//当添加了一个炸弹时，查看是不是自己添加的
+			Bomb bomb = (Bomb) obj;
+			if(bomb.getTarget() == self){
+				selfBomb = bomb;
+			}
+		}
+	}
+
+	public void onObstacleRemoved(Obstacle obj)
+	{
+		if(obj == selfBomb){
+			//当移除物体时，查看移除的是不是自己的炸弹
+			onSelfRound();
+		}
 	}
 	
 	private Person self;

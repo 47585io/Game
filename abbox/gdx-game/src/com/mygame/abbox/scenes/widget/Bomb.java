@@ -1,14 +1,13 @@
 package com.mygame.abbox.scenes.widget;
 
-import com.badlogic.gdx.graphics.glutils.*;
+import java.util.Arrays;
+import android.graphics.Rect;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.mygame.abbox.obstacle.*;
-import com.mygame.abbox.share.math.*;
-import com.mygame.abbox.obstacle.shape.*;
-import com.mygame.abbox.share.input.*;
-import android.graphics.*;
-import com.mygame.abbox.share.graphics.*;
-import com.mygame.abbox.scenes.buff.*;
-import com.badlogic.gdx.scenes.scene2d.*;
+import com.mygame.abbox.obstacle.shape.CircleShape;
+import com.mygame.abbox.scenes.buff.Buff;
+import com.mygame.abbox.share.graphics.ShapeCollision;
+import com.mygame.abbox.share.math.Vector2D;
 
 public class Bomb extends Obstacle implements DynamicObject
 {
@@ -87,7 +86,7 @@ public class Bomb extends Obstacle implements DynamicObject
 	/* 向着指定方向飞行一段距离 */
 	public void update(){
 		getShape().offset((int)mVelocity.x, (int)mVelocity.y);
-		mDuration--;
+		setInputDuration(getInputDuration() - 1);
 	}
 
 	public void onCollision(Obstacle other)
@@ -101,7 +100,7 @@ public class Bomb extends Obstacle implements DynamicObject
 		else if(other instanceof Bomb){
 			onCollisionBomb((Bomb)other);
 		}
-		mDuration = 10;
+		setInputDuration(10);
 	}
 
 	/* 炸弹碰到方块了 */
@@ -176,7 +175,7 @@ public class Bomb extends Obstacle implements DynamicObject
 		Vector2D vel1 = bomb1.getVelocity();
 		Vector2D pos2 = new Vector2D(bomb2.getShape().getCircleX(), bomb2.getShape().getCircleY());
 		Vector2D vel2 = bomb2.getVelocity();
-
+		
 		// 计算碰撞后的新速度向量
 		Vector2D v1f = calculateCollisionVelocity(pos1, vel1, pos2, vel2);
         Vector2D v2f = calculateCollisionVelocity(pos2, vel2, pos1, vel1);
@@ -205,8 +204,7 @@ public class Bomb extends Obstacle implements DynamicObject
 	private void onCollisionPerson(Person person)
 	{
 		//将炸弹的伤害和附着在炸弹上的负面Buff施加到人身上，然后销毁自己
-		Buff[] buffs = new Buff[mStateCount];
-		System.arraycopy(mStates, 0, buffs, 0, mStateCount);
+		Buff[] buffs = Arrays.copyOf(mStates, mStateCount);
 		person.sendDamage(mDamage);
 		person.sendBuff(buffs);
 		getMyGroup().removeObstacle(this);

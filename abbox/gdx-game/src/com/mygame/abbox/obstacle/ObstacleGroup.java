@@ -1,14 +1,15 @@
 package com.mygame.abbox.obstacle;
 
 import java.util.*;
-import com.badlogic.gdx.graphics.glutils.*;
-import com.badlogic.gdx.math.*;
+import android.graphics.Rect;
+import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.scenes.scene2d.*;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.mygame.abbox.obstacle.shape.*;
 import com.mygame.abbox.obstacle.ObstacleList.ObstacleListIterator;
-import android.graphics.*;
-import com.mygame.abbox.share.input.*;
-import com.badlogic.gdx.scenes.scene2d.*;
-import com.mygame.abbox.share.utils.*;
+import com.mygame.abbox.share.input.InputRecording;
+import com.mygame.abbox.share.utils.IdentityArrayList;
+
 
 public class ObstacleGroup extends InputListener implements ObstacleContainer
 {
@@ -29,6 +30,7 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 	/* 添加一个物体到组中 */
 	public void addObstacle(Obstacle obj)
 	{
+		int oldSize = getObstacleCount();
 		//动态物体添加到动态物体容器中，静态物体添加到静态物体容器中
 		if(obj instanceof DynamicObject){
 			if(onForeachDynamicObstacles){
@@ -41,15 +43,21 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		else{
 			mStaticObstacles.addObstacle(obj);
 		}
-		obj.mObstacleGroup = this; //并建立与该组的绑定
-		if(mObstacleWatcher != null){
-			mObstacleWatcher.onObstacleAdded(obj);
+		
+		int newSize = getObstacleCount();
+		if(oldSize < newSize){
+			//如果添加成功，则让物体建立与该组的绑定
+			obj.mObstacleGroup = this;
+			if(mObstacleWatcher != null){
+				mObstacleWatcher.onObstacleAdded(obj);
+			}
 		}
 	}
 
 	/* 从组中移除一个物体 */
 	public void removeObstacle(Obstacle obj)
 	{
+		int oldSize = getObstacleCount();
 		//动态物体从动态物体容器中移除，静态物体从静态物体容器中移除
 		if(obj instanceof DynamicObject){
 			if(onForeachDynamicObstacles){
@@ -62,9 +70,14 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		else{
 			mStaticObstacles.removeObstacle(obj);
 		}
-		obj.mObstacleGroup = null; //并移除与该组的绑定
-		if(mObstacleWatcher != null){
-			mObstacleWatcher.onObstacleRemoved(obj);
+		
+		int newSize = getObstacleCount();
+		if(oldSize > newSize){
+			//如果移除成功，则在发送事件后移除物体与该组的绑定
+			if(mObstacleWatcher != null){
+				mObstacleWatcher.onObstacleRemoved(obj);
+			}
+			obj.mObstacleGroup = null;
 		}
 	}
 
@@ -155,14 +168,14 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		Matrix4 matrix = render.getTransformMatrix();
 		matrix.translate(-mScrollX, -mScrollY, 0);
 		render.setTransformMatrix(matrix);
-		ArrayList<Obstacle> objs = obtain();
+		IdentityArrayList<Obstacle> visibleObstacles = obtain();
 		//获取可视范围内的所有物体，一个个绘制在它们的位置上
-		getObstacles(mScrollX, mScrollY, mScrollX + mDisplayWidth, mScrollY + mDisplayHeight, objs);
-		int size = objs.size();
-		for(int i = 0; i < size; i++){
-			objs.get(i).draw(render);
+		getObstacles(mScrollX, mScrollY, mScrollX + mDisplayWidth, mScrollY + mDisplayHeight, visibleObstacles);
+		int count = visibleObstacles.size();
+		for(int i = 0; i < count; i++){
+			visibleObstacles.get(i).draw(render);
 		}
-		recyle(objs);
+		recyle(visibleObstacles);
 		//绘制后将矩阵还原
 		matrix.translate(mScrollX, mScrollY, 0);
 		render.setTransformMatrix(matrix);
@@ -198,7 +211,7 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 			mCollisionedObstaclePairs = new IdentityHashMap<>();
 		}
 		
-		ArrayList<Obstacle> overlappingObstacles = obtain();
+		IdentityArrayList<Obstacle> overlappingObstacles = obtain();
 		//遍历每个动态物体，检查它与场景内的物体碰撞
 		modifyIterator = mDynamicObstacles.listIerator();
 		while(modifyIterator.hasNext())
@@ -232,7 +245,7 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		}
 		
 		recyle(overlappingObstacles);
-		mCollisionedObstaclePairs.clear(); //清空本轮碰撞记录
+		clearCollisionedObstaclePairs(); //清空本轮碰撞记录
 	}
 	
 	/* 再次检查真实形状是否发生碰撞 */
@@ -272,38 +285,42 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		IdentityArrayList<Obstacle> collisionedObstaclelist = mCollisionedObstaclePairs.get(target);
 		if(collisionedObstaclelist == null){
 			//如果列表没有就创建一个，并让target与列表建立绑定
-			collisionedObstaclelist = new IdentityArrayList<>();
+			collisionedObstaclelist = obtain();
 			mCollisionedObstaclePairs.put(target, collisionedObstaclelist);
 		}
 		collisionedObstaclelist.add(other);
 	}
 	
+	/* 清空本轮碰撞记录，并回收临时物体列表 */
+	private void clearCollisionedObstaclePairs()
+	{
+		for(IdentityArrayList<Obstacle> collisionedObstaclelist : mCollisionedObstaclePairs.values()){
+			recyle(collisionedObstaclelist);
+		}
+		mCollisionedObstaclePairs.clear();
+	}
+	
 	/* 获取临时物体容器 */
-	private static ArrayList<Obstacle> obtain()
+	private static IdentityArrayList<Obstacle> obtain()
 	{
 		synchronized(sCachedBuffer)
 		{
-			for(int i = sCachedBuffer.length - 1; i >= 0; --i){
-				ArrayList<Obstacle> buffer = sCachedBuffer[i];
-				if(buffer != null){
-					sCachedBuffer[i] = null;
-					return buffer;
-				}
+			if(sCachedBufferCount > 0){
+				IdentityArrayList<Obstacle> buffer = sCachedBuffer[--sCachedBufferCount];
+				sCachedBuffer[sCachedBufferCount] = null;
+				return buffer;
 			}
 		}
-		return new ArrayList<Obstacle>();
+		return new IdentityArrayList<Obstacle>();
 	}
 	/* 回收临时物体容器 */
-	private static void recyle(ArrayList<Obstacle> buffer)
+	private static void recyle(IdentityArrayList<Obstacle> buffer)
 	{
 		buffer.clear();
 		synchronized(sCachedBuffer)
 		{
-			for(int i = sCachedBuffer.length - 1; i >= 0; --i){
-				if(sCachedBuffer[i] == null){
-					sCachedBuffer[i] = buffer;
-					break;
-				}
+			if(sCachedBufferCount < sCachedBuffer.length){
+				sCachedBuffer[sCachedBufferCount++] = buffer;
 			}
 		}
 	}
@@ -314,14 +331,16 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 
 	private ObstacleRegionTree mStaticObstacles;  //位置静态不变的物体用树存储，提升获取效率
 	private ObstacleList mDynamicObstacles;       //位置动态改变的物体用列表存储，不需频繁调整
+	private ObstacleWatcher mObstacleWatcher;     //物体监视器
 
 	private boolean onForeachDynamicObstacles;    //是否正在遍历DynamicObstacles物体容器
 	private ObstacleListIterator modifyIterator;  //在遍历DynamicObstacles时修改要用iterator，在同步数据的同时安全遍历
 	
-	private ObstacleWatcher mObstacleWatcher;     //物体监视器
 	private CollisionCallback mCollisionCallback; //碰撞检测回调器
 	private IdentityHashMap<Obstacle, IdentityArrayList<Obstacle>> mCollisionedObstaclePairs; //在每次碰撞检测中，存储每一对已经碰撞的物体
-	private static final ArrayList<Obstacle>[] sCachedBuffer = new ArrayList[6]; //存储临时物体容器
+	
+	private static int sCachedBufferCount = 0;    //临时物体容器个数
+	private static final IdentityArrayList<Obstacle>[] sCachedBuffer = new IdentityArrayList[50]; //存储临时物体容器
 	
 	private TouchTarget mTouchTarget;       //记录所有被触摸的物体
 	private InputRecording mInputRecording; //记录触摸的位置或者键
@@ -330,26 +349,24 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 	/* 处理触摸事件 */
 	public boolean touchDown(InputEvent event, float screenX, float screenY, int pointer, int button)
 	{
-		//x += mScrollX;
-		//y += mScrollY;
 		int x = (int) screenX;
 		int y = (int) screenY;
-		ArrayList<Obstacle> tmpList = obtain();
+		IdentityArrayList<Obstacle> containsPointObstacles = obtain();
 		//获取包含该点的所有物体，一个个遍历
-		getObstacles(x, y, x, y, tmpList);
-		int count = tmpList.size();
+		getObstacles(x, y, x, y, containsPointObstacles);
+		int count = containsPointObstacles.size();
 		for(int i = 0; i < count; ++i)
 		{
-			Obstacle obj = tmpList.get(i);
+			Obstacle obj = containsPointObstacles.get(i);
 			Rect bounds = obj.getShape().getBounds();
-			if(obj.getShape().contains(x, y) && obj.touchDown(event, x - bounds.left, y - bounds.top, pointer, button)){
-				//如果物体的真实形状包含此点则将事件传给它，如果它消耗了事件，则记录它并返回true
+			if(obj.getInputDuration() <= 0 && obj.getShape().contains(x, y) && obj.touchDown(event, x - bounds.left, y - bounds.top, pointer, button)){
+				//如果物体可以接收事件，并且它的真实形状包含此点则将事件传给它，如果它消耗了事件，则记录它并返回true
 				mTouchTarget = TouchTarget.addPointer(mTouchTarget, obj, pointer);
-				recyle(tmpList);
+				recyle(containsPointObstacles);
 				return true;
 			}
 		}
-		recyle(tmpList);
+		recyle(containsPointObstacles);
 		//没有物体被触摸或消耗事件，则自己消耗事件
 		if(mInputRecording == null){
 			mInputRecording = new InputRecording();
@@ -370,8 +387,10 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		Obstacle input = TouchTarget.findInputById(mTouchTarget, pointer);
 		if(input != null){
 			//如果找到了则传递事件，在touchUp时必须移除该物体的该手指
-			Rect bounds = input.getShape().getBounds();
-			input.touchUp(event, x - bounds.left, y - bounds.top, pointer, button);
+			if(input.getInputDuration() <= 0){
+				Rect bounds = input.getShape().getBounds();
+				input.touchUp(event, x - bounds.left, y - bounds.top, pointer, button);
+			}
 			TouchTarget.removePointer(mTouchTarget, pointer);
 			return ;
 		}
@@ -394,8 +413,10 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		Obstacle input = TouchTarget.findInputById(mTouchTarget, pointer);
 		if(input != null){
 			//如果找到了则传递事件，并让它继续消耗事件
-			Rect bounds = input.getShape().getBounds();
-			input.touchDragged(event, x - bounds.left, y - bounds.top, pointer);
+			if(input.getInputDuration() <= 0){
+				Rect bounds = input.getShape().getBounds();
+				input.touchDragged(event, x - bounds.left, y - bounds.top, pointer);
+			}
 			return ;
 		}
 		//没有物体消耗事件，则看自己能不能消耗事件
@@ -412,21 +433,21 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 	/* 处理键事件 */
 	public boolean keyDown(InputEvent event, int key)
 	{
-		if(mFocusObstacle != null){
+		if(mFocusObstacle != null && mFocusObstacle.getInputDuration() <= 0){
 			return mFocusObstacle.keyDown(event, key);
 		}
 		return false;
 	}
 	public boolean keyUp(InputEvent event, int key)
 	{
-		if(mFocusObstacle != null){
+		if(mFocusObstacle != null && mFocusObstacle.getInputDuration() <= 0){
 			return mFocusObstacle.keyUp(event, key);
 		}
 		return false;
 	}
 	public boolean keyTyped(InputEvent event, char charcter)
 	{
-		if(mFocusObstacle != null){
+		if(mFocusObstacle != null && mFocusObstacle.getInputDuration() <= 0){
 			return mFocusObstacle.keyTyped(event, charcter);
 		}
 		return false;

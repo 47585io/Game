@@ -1,5 +1,6 @@
 package com.mygame.abbox.obstacle.shape;
-import android.graphics.*;
+
+import android.graphics.Rect;
 
 public class RectShape implements Shape
 {

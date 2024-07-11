@@ -20,6 +20,7 @@ public class MyGdxGame implements ApplicationListener
 		viewport.apply();
 		
 		mScenes = new Scenes(width/2, height/2, width/2, height/2);
+		//mScenes = new Scenes(width * 2, height * 2, width, height);
 		mScenes.init();
 		mScenes.getShapeRender().getProjectionMatrix().setToOrtho2D(0, height, width, -height);
 		//Gdx.input.setInputProcessor(mScenes);
@@ -29,7 +30,7 @@ public class MyGdxGame implements ApplicationListener
 	public void render()
 	{
 		mScenes.update();
-	    mScenes.draw();
+	    mScenes.render();
 	}
 
 	@Override

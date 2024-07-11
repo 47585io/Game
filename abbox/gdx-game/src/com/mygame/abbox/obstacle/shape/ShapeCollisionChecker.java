@@ -1,6 +1,7 @@
 package com.mygame.abbox.obstacle.shape;
-import com.mygame.abbox.share.graphics.*;
-import android.graphics.*;
+
+import android.graphics.Rect;
+import com.mygame.abbox.share.graphics.ShapeCollision;
 
 public class ShapeCollisionChecker
 {
@@ -18,4 +19,3 @@ public class ShapeCollisionChecker
 		                                  circle.getCircleX(), circle.getCircleY(), circle.getCircleRadius());
 	}
 }
-

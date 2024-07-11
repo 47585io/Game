@@ -1,6 +1,7 @@
 package com.mygame.abbox.obstacle;
+
 import java.util.*;
-import com.mygame.abbox.share.utils.*;
+import com.mygame.abbox.share.utils.IdentityArrayList;
 
 public class ObstacleList implements ObstacleContainer
 {

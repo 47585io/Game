@@ -1,5 +1,6 @@
 package com.mygame.abbox.obstacle.shape;
-import android.graphics.*;
+
+import android.graphics.Rect;
 
 public class CircleShape implements Shape
 {
@@ -42,4 +43,3 @@ public class CircleShape implements Shape
 		return new Rect(circleX - circleRadius, circleY - circleRadius, circleX + circleRadius, circleY + circleRadius);
 	}
 }
-

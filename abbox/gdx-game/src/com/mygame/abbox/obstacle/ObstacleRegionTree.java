@@ -5,37 +5,28 @@ import android.graphics.Rect;
 import com.mygame.abbox.obstacle.Obstacle;
 import com.mygame.abbox.share.graphics.RectUtils;
 
-
 /* 区域树的简单实现，用于存储矩形，以及快速获取与指定查找范围重叠的所有矩形 */
 public class ObstacleRegionTree implements ObstacleContainer
 {
 	/* 构建一颗空区域树 */
 	public ObstacleRegionTree(){
-		mObstacleCount = 0;
 		mTree = new RTree();
+		mRectOfObstacle = new IdentityHashMap<>();
 	}
 
 	/* 清空区域树的物体 */
-	public void clear()
-	{
-		mObstacleCount = 0;
-		if(mRectOfObstacle != null){
-			mRectOfObstacle.clear();
-		}
+	public void clear(){
 		mTree = new RTree();
+		mRectOfObstacle.clear();
 	}
 
 	/* 为指定的物体在区域树中分配一块矩形区域 */
 	public void addObstacle(Obstacle obj)
 	{
-		if(mRectOfObstacle == null){
-			mRectOfObstacle = new IdentityHashMap<>();
-		}
 		Rect self = obj.getShape().getBounds();
 		Rect rect = mRectOfObstacle.get(obj);
 		if(rect == null){
 			//如果没有这个矩形物体就添加一个
-			mObstacleCount++;
 			rect = new Rect(self);
 			mRectOfObstacle.put(obj, rect);
 		}else{
@@ -49,49 +40,40 @@ public class ObstacleRegionTree implements ObstacleContainer
 	/* 从区域树中移除指定的物体 */
 	public void removeObstacle(Obstacle obj)
 	{
-		if(mRectOfObstacle == null){
-			return;
-		} 
 		Rect rect = mRectOfObstacle.remove(obj);
 		if(rect != null){
 			//如果存在此矩形物体则移除它
 			mTree.delete(rect, obj);
-			mObstacleCount--;
 		}
 	}
 
 	/* 获取区域树中的物体，这些物体与指定的矩形查找范围重叠 */
 	public void getObstacles(int left, int top, int right, int bottom, Collection<Obstacle> ret)
 	{
-		if(mObstacleCount > 0){
+		if(getObstacleCount() > 0){
 			//如果有，则收集树中指定范围内的物体
 			mTree.getObjects(left, top, right, bottom, ret);
 		}
 	}
 	
-	/* 获取物体在区域树中的矩形区域，如果存在此物体则返回true */
-	public boolean getObstacleBounds(Obstacle obj, Rect bounds)
+	/* 获取物体在区域树中的矩形区域 */
+	public void getObstacleBounds(Obstacle obj, Rect bounds)
 	{
-		if(mRectOfObstacle != null)
-		{
-			Rect self = mRectOfObstacle.get(obj);
-			if(self != null){
-				//如果存在此矩形物体则获取它的矩形区域
-				bounds.set(self);
-				return true;
-			}
+		Rect self = mRectOfObstacle.get(obj);
+		if(self != null){
+			//如果存在此矩形物体则获取它的矩形区域
+			bounds.set(self);
 		}
-		return false;
 	}
 	
 	/* 获取区域树中物体的个数 */
 	public int getObstacleCount(){
-		return mObstacleCount;
+		return mRectOfObstacle.size();
 	}
 
 	/* 物体是否在区域树中 */
 	public boolean contains(Obstacle obj){
-		return mRectOfObstacle != null && mRectOfObstacle.get(obj) != null;
+		return mRectOfObstacle.get(obj) != null;
 	}
 	
 	/* 获取区域树的大小，这个矩形大小刚好可以包围区域树中的所有物体 */
@@ -100,7 +82,6 @@ public class ObstacleRegionTree implements ObstacleContainer
 	}
 	
 	private RTree mTree;  //区域树
-	private int mObstacleCount; //物体个数
 	private IdentityHashMap<Obstacle, Rect> mRectOfObstacle; //每个物体在树中的矩形区域
 
 	
@@ -267,8 +248,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 			else{
 				//当前节点不是根节点，处理自己后继续向上传递
 				RTNode parent = this.parent;
-				int min = RTree.MIN_NODE_CAPACITY; 
-				if (usedSpace < min){
+				if (usedSpace < RTree.MIN_NODE_CAPACITY){
 					//如果当前节点的条目小于MIN_NODE_CAPACITY，则将它从父节点中移除
 					//并且将当前节点记录在list中，等待之后将条目重新插入到树中
 					parent.removeEntry(parent.deleteIndex);
@@ -299,9 +279,10 @@ public class ObstacleRegionTree implements ObstacleContainer
 				mask[i] = i;
 			}
 
-			int rem = count; //剩余的未分配的矩形个数
-			int[] group1 = new int[count]; //记录分配至第一个组的条目在rects的索引
-			int[] group2 = new int[count]; //记录分配至第二个组的条目在rects的索引
+			int rem = count;    //剩余的未分配的条目个数
+			int max = count / 2 + 1; //每个组最多只有一半数量的条目
+			int[] group1 = new int[max]; //记录分配至第一个组的条目在rects的索引
+			int[] group2 = new int[max]; //记录分配至第二个组的条目在rects的索引
 			int i1 = 0, i2 = 0; //记录每个组的条目个数
 
 			//选择两个离得最远的矩形，让它们各成一组
@@ -314,18 +295,39 @@ public class ObstacleRegionTree implements ObstacleContainer
 
 			Rect mbr1 = new Rect(rects[group1[0]]); //第一个组的外包矩形
 			Rect mbr2 = new Rect(rects[group2[0]]); //第二个组的外包矩形
-			//将剩余矩形一个个分配到两个组中
+			//将剩余矩形条目一个个分配到两个组中
 			while(rem > 0)
 			{
-				int diff = Integer.MIN_VALUE;
-				int area1 = RectUtils.getArea(mbr1);
-				int area2 = RectUtils.getArea(mbr2);
-				int areaDiff1 = 0, areaDiff2 = 0;
-				int sel = -1;
+				//每个组最少必须有MIN_NODE_CAPACITY个条目
+				if(rem + i1 == RTree.MIN_NODE_CAPACITY){
+					//即使将剩余的条目全部分配到第一个组中，第一个组才有MIN_NODE_CAPACITY个条目
+					//因此将剩余的条目直接全部分配到第一个组中，并终止循环
+					for(int i = 0; i < count; ++i){
+						if(mask[i] != -1){
+							group1[i1++] = i;
+						}
+					}
+					break;
+				}
+				if(rem + i2 == RTree.MIN_NODE_CAPACITY){
+					//将剩余的条目直接全部分配到第二个组中，并终止循环
+					for(int i = 0; i < count; ++i){
+						if(mask[i] != -1){
+							group2[i2++] = i;
+						}
+					}
+					break;
+				}
+				
+				int diff = Integer.MIN_VALUE;  //两个组加入sel条目时的面积增量差
+				int area1 = RectUtils.getArea(mbr1); //第一个组的(外包矩形)面积
+				int area2 = RectUtils.getArea(mbr2); //第二个组的(外包矩形)面积
+				int areaDiff1 = 0, areaDiff2 = 0;  //分别记录两个组加入sel条目时的面积增量
+				int sel = -1;   //准备分配的条目
 				//遍历剩余的所有矩形，找出下一个进行分配的条目
 				for(int i = 0; i < count; ++i)
 				{
-					if(mask[i] != -1)
+					if(mask[i] != -1) //还没有被分配
 					{
 						Rect a = RectUtils.getUnionRect(mbr1, rects[i]);
 						int diff1 = RectUtils.getArea(a) - area1;
@@ -340,6 +342,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 
 						int diffDiv = Math.abs(diff1 - diff2);
 						if (diffDiv > diff){
+							//记录分别加入两个组时面积增量差更大的矩形条目
 							areaDiff1 = diff1;
 							areaDiff2 = diff2;
 							diff = diffDiv;
@@ -364,7 +367,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 					group1[i1++] = sel;
 				}else if (i1 > i2){
 					group2[i2++] = sel;
-				}
+				}//都相等则直接加入组1
 				else{
 					group1[i1++] = sel;
 				}
@@ -375,6 +378,7 @@ public class ObstacleRegionTree implements ObstacleContainer
 				}else{
 					mbr2.union(rects[sel]);
 				}
+				//矩形被分配了，标记它
 				mask[sel] = -1;
 				rem--;
 			}

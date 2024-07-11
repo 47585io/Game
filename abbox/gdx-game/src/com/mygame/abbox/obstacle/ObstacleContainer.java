@@ -1,4 +1,5 @@
 package com.mygame.abbox.obstacle;
+
 import java.util.Collection;
 
 public interface ObstacleContainer
@@ -15,4 +16,3 @@ public interface ObstacleContainer
 	
 	public void clear();
 }
-

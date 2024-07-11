@@ -27,7 +27,7 @@ public class Scenes extends InputAdapter
 		return mShapeRenderer;
 	}
 	
-	public void draw(){
+	public void render(){
 		mShapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 		mObstacleGroup.draw(mShapeRenderer);
 		mShapeRenderer.end();
