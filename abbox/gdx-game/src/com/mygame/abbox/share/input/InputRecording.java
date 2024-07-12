@@ -6,7 +6,6 @@ public class InputRecording
 	public int lastX, lastY;
 	public int firstX, firstY;
 	public int pointer;
-	
 	public int key;
 	
 	public InputRecording(){
@@ -26,6 +25,19 @@ public class InputRecording
 		firstY = y;
 	}
 	
+	public int getDx(){
+		return nowX - lastX;
+	}
+	public int getDy(){
+		return nowY - lastY;
+	}
+	public int getOrginDx(){
+		return nowX - firstX;
+	}
+	public int getOrginDy(){
+		return nowY - firstY;
+	}
+	
 	public void touchDown(int x, int y, int id)
 	{
 		firstX = lastX = nowX = x;
@@ -34,5 +46,8 @@ public class InputRecording
 	}
 	public void touchUp(){
 		pointer = -1;
+	}
+	public boolean isTouching(){
+		return pointer != -1;
 	}
 }

@@ -368,12 +368,12 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 		}
 		recyle(containsPointObstacles);
 		//没有物体被触摸或消耗事件，则自己消耗事件
-		if(mInputRecording == null){
-			mInputRecording = new InputRecording();
-		}
 		if(mFocusObstacle != null){
 			//如果正在跟踪焦点物体，则不滚动
 			return false;
+		}
+		if(mInputRecording == null){
+			mInputRecording = new InputRecording();
 		}
 		mInputRecording.touchDown(x, y, pointer);
 		return true;

@@ -1,6 +1,7 @@
 package com.mygame.abbox.scenes.buff;
-import com.mygame.abbox.scenes.widget.*;
-import com.badlogic.gdx.graphics.*;
+
+import com.badlogic.gdx.graphics.Color;
+import com.mygame.abbox.scenes.widget.Person;
 
 public class HealthyBuff implements Buff
 {

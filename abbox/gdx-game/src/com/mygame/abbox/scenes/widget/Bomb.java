@@ -2,89 +2,63 @@ package com.mygame.abbox.scenes.widget;
 
 import java.util.Arrays;
 import android.graphics.Rect;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.mygame.abbox.obstacle.*;
 import com.mygame.abbox.obstacle.shape.CircleShape;
 import com.mygame.abbox.scenes.buff.Buff;
 import com.mygame.abbox.share.graphics.ShapeCollision;
+import com.mygame.abbox.share.graphics.ColorShapeDrawable;
 import com.mygame.abbox.share.math.Vector2D;
+import com.mygame.abbox.share.input.onTouchMove;
 
 public class Bomb extends Obstacle implements DynamicObject
 {
+	private static final int MAX_STATE_COUNT = 5;
 	private int mDamage;         //炸弹的伤害
 	private Buff[] mStates;      //炸弹的buff
 	private int mStateCount;     //炸弹的buff数量
 	private Vector2D mVelocity;  //炸弹的向量
-	private boolean enabledDrawingVelocity; //是否绘制向量箭头
-	Person mTarget;          //谁发射的炸弹
+	Person mTarget;              //谁发射的炸弹
 	
 	public Bomb(){
 		this(0, 0, 0);
 	}
 	public Bomb(int cx, int cy, int radius){
-		this(cx, cy, radius, 0, 0, 0);
+		this(cx, cy, radius, 0, new Buff[0], 0, 0);
 	}
-	public Bomb(int cx, int cy, int radius, int damage, int dx, int dy)
+	public Bomb(int cx, int cy, int radius, int damage, Buff[] buffs, int dx, int dy)
 	{
-		setShape(new CircleShape(cx, cy, radius));
 		mDamage = damage;
-		mStates = new Buff[5];
+		mStates = new Buff[MAX_STATE_COUNT];
+		mStateCount = buffs.length > MAX_STATE_COUNT ? MAX_STATE_COUNT : buffs.length;
+		System.arraycopy(buffs, 0, mStates, 0, mStateCount);
 		mVelocity = new Vector2D(dx, dy);
+		
+		setShape(new CircleShape(cx, cy, radius));
+		setObstacleDrawable(new BombDrawable(Color.WHITE));
+		setInputListener(new MoveBomb());
 	}
 
-	public void setVelocityDrawingEnabled(boolean enabled){
-		enabledDrawingVelocity = enabled;
-	}
-	public void setmDamage(int damage){
-		mDamage = damage;
-	}
 	public int getDamage(){
 		return mDamage;
+	}
+	public Buff[] getBuffs(){
+		return Arrays.copyOf(mStates, mStateCount);
 	}
 	public Vector2D getVelocity(){
 		return mVelocity;
 	}
-	public CircleShape getShape(){
-		return (CircleShape)super.getShape();
-	}
 	public Person getTarget(){
 		return mTarget;
 	}
+	public CircleShape getShape(){
+		return (CircleShape)super.getShape();
+	}
 
-	public void draw(ShapeRenderer render)
-	{
-		//绘制球本身
-		CircleShape shape = getShape();
-		int circleX = shape.getCircleX();
-		int circleY = shape.getCircleY();
-		int circleRadius = shape.getCircleRadius();
-		render.circle(circleX, circleY, circleRadius);
-
-		//绘制向量箭头
-		if(!enabledDrawingVelocity){
-			return ;
-		}
-		int lineWidth = (int)(circleRadius * 0.2);
-		int lineLength = (int)(circleRadius * 3.0);
-
-		Vector2D direction = mVelocity.normalize().multiply(lineLength);
-		int xVertex = (int)(circleX + direction.x);
-		int yVertex = (int)(circleY + direction.y);
-		render.rectLine(circleX, circleY, xVertex, yVertex, lineWidth);
-
-		direction = direction.normalize().negate();
-		Vector2D perpendicular = direction.perpendicular();
-		double sx = Math.cos(0.3);
-		double sy = Math.sin(0.3);
-
-		Vector2D line1 = direction.multiply(sx).add(perpendicular.multiply(sy)).multiply(lineLength / 2);
-		Vector2D line2 = direction.multiply(sx).add(perpendicular.negate().multiply(sy)).multiply(lineLength / 2);
-		render.rectLine(xVertex, yVertex, (int)(xVertex + line1.x), (int)(yVertex + line1.y), lineWidth);
-		render.rectLine(xVertex, yVertex, (int)(xVertex + line2.x), (int)(yVertex + line2.y), lineWidth);
-	}   
-	
-	/* 向着指定方向飞行一段距离 */
 	public void update(){
+		//向着指定方向移动一段距离，并且限制触摸的帧数减1
 		getShape().offset((int)mVelocity.x, (int)mVelocity.y);
 		setInputDuration(getInputDuration() - 1);
 	}
@@ -100,7 +74,7 @@ public class Bomb extends Obstacle implements DynamicObject
 		else if(other instanceof Bomb){
 			onCollisionBomb((Bomb)other);
 		}
-		setInputDuration(10);
+		setInputDuration(10); //碰撞后一段时间内无法手动改变方向
 	}
 
 	/* 炸弹碰到方块了 */
@@ -204,16 +178,42 @@ public class Bomb extends Obstacle implements DynamicObject
 	private void onCollisionPerson(Person person)
 	{
 		//将炸弹的伤害和附着在炸弹上的负面Buff施加到人身上，然后销毁自己
-		Buff[] buffs = Arrays.copyOf(mStates, mStateCount);
+		Buff[] buffs = getBuffs();
 		person.sendDamage(mDamage);
 		person.sendBuff(buffs);
 		getMyGroup().removeObstacle(this);
 	}
 	
+	/* 绘制炸弹的Drawable */
+	public class BombDrawable extends ColorShapeDrawable
+	{
+		public BombDrawable(Color color){
+			super(color);
+		}
+		public void onDraw(ShapeRenderer render)
+		{
+			//绘制球本身
+			CircleShape shape = getShape();
+			int circleX = shape.getCircleX();
+			int circleY = shape.getCircleY();
+			int circleRadius = shape.getCircleRadius();
+			render.circle(circleX, circleY, circleRadius);
+		}
+	}
+	
+	/* 当触摸炸弹时，改变炸弹方向 */
+	public class MoveBomb extends onTouchMove
+	{
+		public void move(InputEvent event, int dx, int dy, int orginDx, int orginDy){
+			mVelocity.set(orginDx, orginDy);
+		}
+	}
+	
+	/* 炸弹工厂 */
 	public static class BombFactory
 	{
-		public Bomb makeBomb(int cx, int cy, int radius, int damage, int dx, int dy){
-			return new Bomb(cx, cy, radius, damage, dx, dy);
+		public Bomb makeBomb(int cx, int cy, int radius, int damage, Buff[] buffs, int dx, int dy){
+			return new Bomb(cx, cy, radius, damage, buffs, dx, dy);
 		}
 	}
 }

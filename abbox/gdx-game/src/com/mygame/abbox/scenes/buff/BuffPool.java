@@ -1,7 +1,7 @@
 package com.mygame.abbox.scenes.buff;
 
-import com.mygame.abbox.share.utils.*;
-import com.mygame.abbox.scenes.widget.*;
+import com.mygame.abbox.scenes.widget.Person;
+import com.mygame.abbox.share.utils.IdentityArrayList;
 
 public class BuffPool
 {

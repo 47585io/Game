@@ -1,23 +1,24 @@
 package com.mygame.abbox.scenes.widget;
 
-import android.graphics.*;
-import com.badlogic.gdx.graphics.glutils.*;
-import com.mygame.abbox.obstacle.*;
-import com.mygame.abbox.obstacle.shape.*;
-import com.mygame.abbox.scenes.buff.*;
-import java.util.*;
+import android.graphics.Rect;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.mygame.abbox.obstacle.Obstacle;
+import com.mygame.abbox.obstacle.shape.RectShape;
+import com.mygame.abbox.scenes.buff.Buff;
+import com.mygame.abbox.share.graphics.ColorShapeDrawable;
 
 public class Box extends Obstacle
 {
 	private Buff mState;
-	private static final Random mRand = new Random();
 	
 	public Box(){
-		this(0, 0, 0, 0);
+		this(0, 0, 0, 0, null);
 	}
-	public Box(int left, int top, int right, int bottom){
+	public Box(int left, int top, int right, int bottom, Buff buff){
+		mState = buff;
 		setShape(new RectShape(left, top, right, bottom));
-		//mState = randBuff();
+		setObstacleDrawable(new BoxDrawable(mState != null ? mState.buffColor() : Color.WHITE));
 	}
 	public RectShape getShape(){
 		return (RectShape)super.getShape();
@@ -26,22 +27,16 @@ public class Box extends Obstacle
 		return mState;
 	}
 
-	public void draw(ShapeRenderer render){
-		//render.setColor(mState.buffColor());
-		Rect rect = getShape().getBounds();
-		render.rect(rect.left, rect.top, rect.width(), rect.height());
-	}
-	
-	private static Buff randBuff()
+	/* 绘制方块的Drawable */
+	public class BoxDrawable extends ColorShapeDrawable
 	{
-		int id = mRand.nextInt() % 2;
-		Buff buff = null;
-		switch(id){
-			case 1:
-				buff = new HealthyBuff(50);
-				break;
+		public BoxDrawable(Color color){
+			super(color);
 		}
-		return buff;
+		public void onDraw(ShapeRenderer render){
+			//绘制方块矩形
+			Rect rect = getShape().getBounds();
+			render.rect(rect.left, rect.top, rect.width(), rect.height());
+		}
 	}
 }
-

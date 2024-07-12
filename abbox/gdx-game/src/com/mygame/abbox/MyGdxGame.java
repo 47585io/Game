@@ -19,11 +19,11 @@ public class MyGdxGame implements ApplicationListener
 		viewport.setScreenBounds(0, height, width, -height);
 		viewport.apply();
 		
-		mScenes = new Scenes(width/2, height/2, width/2, height/2);
-		//mScenes = new Scenes(width * 2, height * 2, width, height);
+		//mScenes = new Scenes(width/2, height/2, width/2, height/2);
+		mScenes = new Scenes(width * 2, height * 2, width, height);
 		mScenes.init();
 		mScenes.getShapeRender().getProjectionMatrix().setToOrtho2D(0, height, width, -height);
-		//Gdx.input.setInputProcessor(mScenes);
+		Gdx.input.setInputProcessor(mScenes);
 	}
 
 	@Override

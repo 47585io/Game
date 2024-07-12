@@ -6,6 +6,7 @@ import com.mygame.abbox.obstacle.ObstacleGroup.*;
 import com.mygame.abbox.scenes.widget.*;
 import java.util.*;
 import com.badlogic.gdx.scenes.scene2d.*;
+import com.mygame.abbox.scenes.buff.*;
 
 public class GameManger implements CollisionCallback, ObstacleWatcher
 {
@@ -15,9 +16,9 @@ public class GameManger implements CollisionCallback, ObstacleWatcher
 	
 	public void init(){
 		initEdge();
-		//initPersons();
+		initPersons();
 		initBomb();
-		//initBox(200);
+		initBox(200);
 	}
 	
 	private void initBox(int count)
@@ -38,10 +39,10 @@ public class GameManger implements CollisionCallback, ObstacleWatcher
 		int height = group.getHeight();
 		int spacing = 10;
 
-		Box left = new Box(0, 0, 0 + spacing, height);
-		Box top = new Box(0, 0, width, 0 + spacing);
-		Box right = new Box(width - spacing, 0, width, height);
-		Box bottom = new Box(0, height - spacing, width, height);
+		Box left = new Box(0, 0, 0 + spacing, height, null);
+		Box top = new Box(0, 0, width, 0 + spacing, null);
+		Box right = new Box(width - spacing, 0, width, height, null);
+		Box bottom = new Box(0, height - spacing, width, height, null);
 
 		group.addObstacle(left);
 		group.addObstacle(top);
@@ -50,18 +51,19 @@ public class GameManger implements CollisionCallback, ObstacleWatcher
 	}
 
 	private void initPersons(){
-		Person person = new Person(100, 500, 160, 700);
-		mScenes.getObstacleGroup().addObstacle(person);
+		self = new Person(100, 500, 160, 700);
+		mScenes.getObstacleGroup().addObstacle(self);
 	}
 	
 	private void initBomb(){
-		Bomb b1 = new Bomb(50, 50, 30, 0, 4, 4);
-		Bomb b2 = new Bomb(500, 500, 30, 0, 4, 4);
-		Bomb b3 = new Bomb(250, 250, 30, 0, 4, 4);
-		mScenes.getObstacleGroup().addObstacle(b1);
-		mScenes.getObstacleGroup().addObstacle(b2);
-		mScenes.getObstacleGroup().addObstacle(b3);
-		b1.requestFocus();
+		Buff[] buffs = new Buff[0];
+		selfBomb = self.makeBomb(50, 50, 30, 0, buffs, 4, 4);
+		//Bomb b2 = new Bomb(500, 500, 30, 0, buffs, 4, 4);
+		//Bomb b3 = new Bomb(250, 250, 30, 0, buffs, 4, 4);
+		mScenes.getObstacleGroup().addObstacle(selfBomb);
+		//mScenes.getObstacleGroup().addObstacle(b2);
+		//mScenes.getObstacleGroup().addObstacle(b3);
+		selfBomb.requestFocus();
 	}
 
 	private Box nextRandBox()
@@ -89,7 +91,7 @@ public class GameManger implements CollisionCallback, ObstacleWatcher
 		if(objs.size() > 0){
 			return null;
 		}
-		return new Box(rect.left, rect.top, rect.right, rect.bottom);
+		return new Box(rect.left, rect.top, rect.right, rect.bottom, null);
 	}
 	
 	private static int rand(int a, int b){

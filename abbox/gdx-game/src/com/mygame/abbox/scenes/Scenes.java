@@ -41,8 +41,10 @@ public class Scenes extends InputAdapter
 		setTouchEvent(screenX, screenY, pointer, button, InputEvent.Type.touchDown);
 		int scrollX = mObstacleGroup.getScrollX();
 		int scrollY = mObstacleGroup.getScrollY();
-		return mObstacleGroup.touchDown(mInputEvent, screenX + scrollX, screenY + scrollY, pointer, button);
-	}
+		mObstacleGroup.touchDown(mInputEvent, screenX + scrollX, screenY + scrollY, pointer, button);
+	
+		return false;
+		}
 
 	public boolean touchDragged(int screenX, int screenY, int pointer)
 	{
