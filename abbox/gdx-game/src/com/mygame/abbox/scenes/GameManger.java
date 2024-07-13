@@ -17,7 +17,7 @@ public class GameManger implements CollisionCallback, ObstacleWatcher
 	public void init(){
 		initEdge();
 		initPersons();
-		initBomb();
+		//initBomb();
 		initBox(200);
 	}
 	
@@ -51,13 +51,13 @@ public class GameManger implements CollisionCallback, ObstacleWatcher
 	}
 
 	private void initPersons(){
-		self = new Person(100, 500, 160, 700);
+		self = new Person(1000, 1500, 1060, 1700);
 		mScenes.getObstacleGroup().addObstacle(self);
 	}
 	
 	private void initBomb(){
 		Buff[] buffs = new Buff[0];
-		selfBomb = self.makeBomb(50, 50, 30, 0, buffs, 4, 4);
+		selfBomb = self.makeBomb(30, 4, 4);
 		//Bomb b2 = new Bomb(500, 500, 30, 0, buffs, 4, 4);
 		//Bomb b3 = new Bomb(250, 250, 30, 0, buffs, 4, 4);
 		mScenes.getObstacleGroup().addObstacle(selfBomb);

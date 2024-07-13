@@ -3,15 +3,15 @@ package com.mygame.abbox.obstacle;
 import java.util.*;
 import android.graphics.Rect;
 import com.badlogic.gdx.math.Matrix4;
-import com.badlogic.gdx.scenes.scene2d.*;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.mygame.abbox.obstacle.shape.*;
 import com.mygame.abbox.obstacle.ObstacleList.ObstacleListIterator;
-import com.mygame.abbox.share.input.InputRecording;
+import com.mygame.abbox.share.input.onTouchMove;
 import com.mygame.abbox.share.utils.IdentityArrayList;
 
-
-public class ObstacleGroup extends InputListener implements ObstacleContainer
+/* 用于存储物体，并高效管理一组物体的碰撞，绘制和事件的类 */
+public class ObstacleGroup extends onTouchMove implements ObstacleContainer
 {
 	/* 创建指定大小的物体组 */
 	public ObstacleGroup(int width, int height, int displayw, int displayh)
@@ -32,7 +32,8 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 	{
 		int oldSize = getObstacleCount();
 		//动态物体添加到动态物体容器中，静态物体添加到静态物体容器中
-		if(obj instanceof DynamicObject){
+		if(obj instanceof DynamicObject)
+		{
 			if(onForeachDynamicObstacles){
 				//在遍历时，使用iterator修改容器，同步下标
 				modifyIterator.add(obj);
@@ -59,7 +60,8 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 	{
 		int oldSize = getObstacleCount();
 		//动态物体从动态物体容器中移除，静态物体从静态物体容器中移除
-		if(obj instanceof DynamicObject){
+		if(obj instanceof DynamicObject)
+		{
 			if(onForeachDynamicObstacles){
 				//在遍历时，使用iterator修改容器，同步下标
 				modifyIterator.remove(obj);
@@ -229,7 +231,7 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 				{
 					if(other instanceof DynamicObject){
 						//两个动态物体碰撞在一起了，先检查它们是否已经碰撞过一次
-						if(! isCollisioned(target, other)){
+						if(!isCollisioned(target, other)){
 							//如果已经碰撞过一次则不再碰撞，否则需要记录下来，因为下次它们可能重复碰撞
 							mCollisionCallback.onCollision(target, other);
 							addCollisionedObstacle(target, other);
@@ -343,24 +345,23 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 	private static final IdentityArrayList<Obstacle>[] sCachedBuffer = new IdentityArrayList[50]; //存储临时物体容器
 	
 	private TouchTarget mTouchTarget;       //记录所有被触摸的物体
-	private InputRecording mInputRecording; //记录触摸的位置或者键
 	Obstacle mFocusObstacle;                //要跟踪的物体，键分配给的物体
 	
 	/* 处理触摸事件 */
 	public boolean touchDown(InputEvent event, float screenX, float screenY, int pointer, int button)
 	{
-		int x = (int) screenX;
-		int y = (int) screenY;
+		//手指触摸到内容的位置需要加上滚动
+		int contentX = (int) screenX + mScrollX;
+		int contentY = (int) screenY + mScrollY;
 		IdentityArrayList<Obstacle> containsPointObstacles = obtain();
 		//获取包含该点的所有物体，一个个遍历
-		getObstacles(x, y, x, y, containsPointObstacles);
+		getObstacles(contentX, contentY, contentX, contentY, containsPointObstacles);
 		int count = containsPointObstacles.size();
 		for(int i = 0; i < count; ++i)
 		{
 			Obstacle obj = containsPointObstacles.get(i);
-			Rect bounds = obj.getShape().getBounds();
-			if(obj.getInputDuration() <= 0 && obj.getShape().contains(x, y) && obj.touchDown(event, x - bounds.left, y - bounds.top, pointer, button)){
-				//如果物体可以接收事件，并且它的真实形状包含此点则将事件传给它，如果它消耗了事件，则记录它并返回true
+			if(obj.getInputDuration() <= 0 && obj.getShape().contains(contentX, contentY) && obj.touchDown(event, contentX, contentY, pointer, button)){
+				//如果物体可以接收事件，并且它的真实形状包含此点则将事件传给它，如果它消耗了事件则记录它并返回true
 				mTouchTarget = TouchTarget.addPointer(mTouchTarget, obj, pointer);
 				recyle(containsPointObstacles);
 				return true;
@@ -372,62 +373,48 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 			//如果正在跟踪焦点物体，则不滚动
 			return false;
 		}
-		if(mInputRecording == null){
-			mInputRecording = new InputRecording();
-		}
-		mInputRecording.touchDown(x, y, pointer);
-		return true;
-	}
-	
-	public void touchUp(InputEvent event, float screenX, float screenY, int pointer, int button)
-	{
-		int x = (int) screenX;
-		int y = (int) screenY;
-		//从记录的被触摸物体中寻找一个消耗该手指事件的物体
-		Obstacle input = TouchTarget.findInputById(mTouchTarget, pointer);
-		if(input != null){
-			//如果找到了则传递事件，在touchUp时必须移除该物体的该手指
-			if(input.getInputDuration() <= 0){
-				Rect bounds = input.getShape().getBounds();
-				input.touchUp(event, x - bounds.left, y - bounds.top, pointer, button);
-			}
-			TouchTarget.removePointer(mTouchTarget, pointer);
-			return ;
-		}
-		//没有物体消耗事件，则看自己能不能消耗事件
-		if(pointer == mInputRecording.pointer){
-			//如果在touchDown时记录了手指，则继续消耗该手指的事件滚动自己
-			mInputRecording.setNowPos(x, y);
-			int dx = x - mInputRecording.lastX;
-			int dy = y - mInputRecording.lastY;
-			scrollBy(-dx, -dy);
-			mInputRecording.touchUp();
-		}
+		//在滚动时，需要使用的是手指落在ObstacleGroup上的坐标
+		return super.touchDown(event, screenX, screenY, pointer, button);
 	}
 	
 	public void touchDragged(InputEvent event, float screenX, float screenY, int pointer)
 	{
-		int x = (int) screenX;
-		int y = (int) screenY;
+		int contentX = (int) screenX + mScrollX;
+		int contentY = (int) screenY + mScrollY;
 		//从记录的被触摸物体中寻找一个消耗该手指事件的物体
 		Obstacle input = TouchTarget.findInputById(mTouchTarget, pointer);
 		if(input != null){
 			//如果找到了则传递事件，并让它继续消耗事件
 			if(input.getInputDuration() <= 0){
-				Rect bounds = input.getShape().getBounds();
-				input.touchDragged(event, x - bounds.left, y - bounds.top, pointer);
+				input.touchDragged(event, contentX, contentY, pointer);
 			}
 			return ;
 		}
 		//没有物体消耗事件，则看自己能不能消耗事件
-		if(pointer == mInputRecording.pointer){
-			//如果在touchDown时记录了手指，则继续消耗该手指的事件滚动自己
-			mInputRecording.setNowPos(x, y);
-			int dx = x - mInputRecording.lastX;
-			int dy = y - mInputRecording.lastY;
-			scrollBy(-dx, -dy);
-			mInputRecording.setLastPos(x, y);
+		super.touchDragged(event, screenX, screenY, pointer);
+	}
+	
+	public void touchUp(InputEvent event, float screenX, float screenY, int pointer, int button)
+	{
+		int contentX = (int) screenX + mScrollX;
+		int contentY = (int) screenY + mScrollY;
+		//从记录的被触摸物体中寻找一个消耗该手指事件的物体
+		Obstacle input = TouchTarget.findInputById(mTouchTarget, pointer);
+		if(input != null){
+			//如果找到了则传递事件，在touchUp时必须移除该物体的该手指
+			if(input.getInputDuration() <= 0){
+				input.touchUp(event, contentX, contentY, pointer, button);
+			}
+			TouchTarget.removePointer(mTouchTarget, pointer);
+			return ;
 		}
+		//没有物体消耗事件，则看自己能不能消耗事件
+		super.touchUp(event, screenX, screenY, pointer, button);
+	}
+
+	/* 当手指在空白处移动，滚动自己的内容 */
+	public void move(InputEvent event, int dx, int dy, int orginDx, int orginDy){
+		scrollBy(-dx, -dy);
 	}
 
 	/* 处理键事件 */
@@ -477,7 +464,7 @@ public class ObstacleGroup extends InputListener implements ObstacleContainer
 					return touchTarget;
 				}
 			}
-			return new TouchTarget(input, id, touchTarget);
+			return new TouchTarget(input, 1 << id, touchTarget); 
 		}
 		
 		//从链表中寻找与该手指绑定的物体，移除物体与该手指的绑定

@@ -26,7 +26,7 @@ public class Person extends Obstacle
 	}
 	public Person(int left, int top, int right, int bottom)
 	{
-		mAttributes = new Attributes();
+		mAttributes = new Attributes(100, 10, 0);
 		mBuffPool = new BuffPool();
 		
 		setShape(new RectShape(left, top, right, bottom));
@@ -71,9 +71,16 @@ public class Person extends Obstacle
 	public void updateBuffs(int delta){
 		mBuffPool.updateBuffs(this, delta);
 	}
-	public Bomb makeBomb(int cx, int cy, int radius, int damage, Buff[] buffs, int dx, int dy)
+	
+	public Bomb makeBomb(int radius, double dx, double dy)
 	{
-		Bomb bomb;
+		Bomb bomb = null;
+		Rect bounds = getShape().getBounds();
+		int cx = bounds.centerX();
+		int cy = bounds.centerY();
+		int damage = mAttributes.attck(0);
+		Buff[] buffs = mCachedBombBuffs;
+		
 		if(mBombFactory != null){
 			bomb = mBombFactory.makeBomb(cx, cy, radius, damage, buffs, dx, dy);
 		}else{
@@ -87,16 +94,19 @@ public class Person extends Obstacle
 	{
 		super.draw(render);
 		//如果正在被触摸，则绘制发射炸弹的拉线向量箭头
-		if(mVelocityDrawable != null && getInputListener() != null)
+		if(mVelocityDrawable != null && getInputListener() != null && getInputListener() instanceof onTouchMove)
 		{
 			InputRecording recording = ((onTouchMove)getInputListener()).getInputRecording();
-			if(recording != null && recording.isTouching()){
+			if(recording != null && recording.isTouching())
+			{
 				Rect bounds = getShape().getBounds();
 				int startX = bounds.centerX();
 				int startY = bounds.centerY();
 				int dx = recording.nowX - startX;
 				int dy = recording.nowY - startY;	
 				//发射方向应与拖拉方向相反
+				mVelocityDrawable.setVelocityWidth(10);
+				mVelocityDrawable.setVelocityHeadLength(30);
 				mVelocityDrawable.setVelocity(startX, startY, -dx, -dy);
 				mVelocityDrawable.draw(render);
 			}
@@ -132,6 +142,8 @@ public class Person extends Obstacle
 	/* 绘制向量箭头的Drawable */
 	public static class VelocityDrawable extends ColorShapeDrawable
 	{
+		private int velocityWidth;
+		private int velocityHeadLength;
 		private int startX, startY, dx, dy;
 		
 		public VelocityDrawable(Color color){
@@ -143,16 +155,19 @@ public class Person extends Obstacle
 			this.dx = dx;
 			this.dy = dy;
 		}
+		public void setVelocityWidth(int width){
+			velocityWidth = width;
+		}
+		public void setVelocityHeadLength(int length){
+			velocityHeadLength = length;
+		}
 		public void onDraw(ShapeRenderer render)
 		{
 			//绘制箭头的直线
 			Vector2D velocity = new Vector2D(dx, dy);
-			int lineLength = (int)velocity.length();
-			int lineWidth = lineLength / 4;
-
 			int xVertex = startX + dx;
 			int yVertex = startY + dy;
-			render.rectLine(startX, startY, xVertex, yVertex, lineWidth);
+			render.rectLine(startX, startY, xVertex, yVertex, velocityWidth);
 
 			//绘制箭头的顶角
 			Vector2D direction = velocity.normalize().negate();
@@ -160,34 +175,27 @@ public class Person extends Obstacle
 			double sx = Math.cos(0.3);
 			double sy = Math.sin(0.3);
 
-			Vector2D line1 = direction.multiply(sx).add(perpendicular.multiply(sy)).multiply(lineLength / 2);
-			Vector2D line2 = direction.multiply(sx).add(perpendicular.negate().multiply(sy)).multiply(lineLength / 2);
-			render.rectLine(xVertex, yVertex, (int)(xVertex + line1.x), (int)(yVertex + line1.y), lineWidth);
-			render.rectLine(xVertex, yVertex, (int)(xVertex + line2.x), (int)(yVertex + line2.y), lineWidth);
+			Vector2D line1 = direction.multiply(sx).add(perpendicular.multiply(sy)).multiply(velocityHeadLength);
+			Vector2D line2 = direction.multiply(sx).add(perpendicular.negate().multiply(sy)).multiply(velocityHeadLength);
+			render.rectLine(xVertex, yVertex, (int)(xVertex + line1.x), (int)(yVertex + line1.y), velocityWidth);
+			render.rectLine(xVertex, yVertex, (int)(xVertex + line2.x), (int)(yVertex + line2.y), velocityWidth);
 		}
 	}
 	
 	/* 感知触摸并发射炸弹 */
-	private class BombLauncher extends onTouchMove
+	public class BombLauncher extends onTouchMove
 	{
-		public void move(InputEvent event, int dx, int dy, int orginDx, int orginDy)
+		public void touchUp(InputEvent event, float x, float y, int pointer, int button)
 		{
-			if(event.getType() == InputEvent.Type.touchUp)
-			{
-				//计算发射位置和方向
-				InputRecording recording = getInputRecording();
-				Rect bounds = getShape().getBounds();
-				int startX = bounds.centerX();
-				int startY = bounds.centerY();
-				orginDx = recording.nowX - startX;
-				orginDy = recording.nowY - startY;
-				
-				//创建一个炸弹，在Person类中的BombFactory允许你自定义创建的炸弹样式，而不是直接new Bomb
-				Bomb bomb = mBombFactory.makeBomb(startX, startY, 30, mAttributes.attck(0), mCachedBombBuffs, -orginDx, -orginDy);
-				bomb.mTarget = Person.this;
-				bomb.setInputDuration(120);
-				getMyGroup().addObstacle(bomb);
-			}
+			super.touchUp(event, x, y, pointer, button);
+			//计算炸弹方向
+			Rect bounds = getShape().getBounds();
+			int dx = (int)x - bounds.centerX();
+			int dy = (int)y - bounds.centerY();
+			Vector2D velocity = new Vector2D(-dx, -dy).normalize().multiply(6);
+			//创建一个炸弹，并添加到组中
+			Bomb bomb = makeBomb(30, velocity.x, velocity.y);
+			getMyGroup().addObstacle(bomb);
 		}
 	}
 	
@@ -199,6 +207,12 @@ public class Person extends Obstacle
 		public int attack;
 		public int defense;
 
+		public Attributes(int healthy, int attack, int defense){
+			maxHealthy = this.healthy = healthy;
+			this.attack = attack;
+			this.defense = defense;
+		}
+		
 		public float healthyBili(){
 			return (float)healthy / maxHealthy;
 		}

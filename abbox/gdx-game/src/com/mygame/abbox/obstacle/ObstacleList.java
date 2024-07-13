@@ -1,8 +1,9 @@
 package com.mygame.abbox.obstacle;
 
-import java.util.*;
+import java.util.Collection;
 import com.mygame.abbox.share.utils.IdentityArrayList;
 
+/* 用于存储和获取物体的列表 */
 public class ObstacleList implements ObstacleContainer
 {
 	private IdentityArrayList<Obstacle> mObstacles;

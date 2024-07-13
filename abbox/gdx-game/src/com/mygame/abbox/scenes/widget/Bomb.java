@@ -23,12 +23,9 @@ public class Bomb extends Obstacle implements DynamicObject
 	Person mTarget;              //谁发射的炸弹
 	
 	public Bomb(){
-		this(0, 0, 0);
+		this(0, 0, 0, 0, new Buff[0], 0, 0);
 	}
-	public Bomb(int cx, int cy, int radius){
-		this(cx, cy, radius, 0, new Buff[0], 0, 0);
-	}
-	public Bomb(int cx, int cy, int radius, int damage, Buff[] buffs, int dx, int dy)
+	public Bomb(int cx, int cy, int radius, int damage, Buff[] buffs, double dx, double dy)
 	{
 		mDamage = damage;
 		mStates = new Buff[MAX_STATE_COUNT];
@@ -74,7 +71,8 @@ public class Bomb extends Obstacle implements DynamicObject
 		else if(other instanceof Bomb){
 			onCollisionBomb((Bomb)other);
 		}
-		setInputDuration(10); //碰撞后一段时间内无法手动改变方向
+		//碰撞后一段时间内无法手动改变方向
+		setInputDuration(10); 
 	}
 
 	/* 炸弹碰到方块了 */
@@ -178,10 +176,13 @@ public class Bomb extends Obstacle implements DynamicObject
 	private void onCollisionPerson(Person person)
 	{
 		//将炸弹的伤害和附着在炸弹上的负面Buff施加到人身上，然后销毁自己
-		Buff[] buffs = getBuffs();
-		person.sendDamage(mDamage);
-		person.sendBuff(buffs);
-		getMyGroup().removeObstacle(this);
+		if(person != mTarget){
+			//不能打自己
+			Buff[] buffs = getBuffs();
+			person.sendDamage(mDamage);
+			person.sendBuff(buffs);
+			getMyGroup().removeObstacle(this);
+		}
 	}
 	
 	/* 绘制炸弹的Drawable */
@@ -205,14 +206,14 @@ public class Bomb extends Obstacle implements DynamicObject
 	public class MoveBomb extends onTouchMove
 	{
 		public void move(InputEvent event, int dx, int dy, int orginDx, int orginDy){
-			mVelocity.set(orginDx, orginDy);
+			mVelocity = new Vector2D(orginDx, orginDy).normalize().multiply(mVelocity.length());
 		}
 	}
 	
 	/* 炸弹工厂 */
 	public static class BombFactory
 	{
-		public Bomb makeBomb(int cx, int cy, int radius, int damage, Buff[] buffs, int dx, int dy){
+		public Bomb makeBomb(int cx, int cy, int radius, int damage, Buff[] buffs, double dx, double dy){
 			return new Bomb(cx, cy, radius, damage, buffs, dx, dy);
 		}
 	}

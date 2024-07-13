@@ -8,7 +8,7 @@ import com.mygame.abbox.share.graphics.ShapeDrawable;
 public class Obstacle extends InputListener
 {
 	private Shape mShape;
-	private ShapeDrawable mShapeDrawable;
+	private ShapeDrawable mObstacleDrawable;
 	private int mInputDuration;
 	private InputListener mInputListener;
 	ObstacleGroup mObstacleGroup;
@@ -29,10 +29,10 @@ public class Obstacle extends InputListener
 		return mShape;
 	}
 	public void setObstacleDrawable(ShapeDrawable drawable){
-		mShapeDrawable = drawable;
+		mObstacleDrawable = drawable;
 	}
 	public ShapeDrawable getObstacleDrawable(){
-		return mShapeDrawable;
+		return mObstacleDrawable;
 	}
 	
 	public void setInputDuration(int duration){
@@ -96,8 +96,8 @@ public class Obstacle extends InputListener
 	
 	public void draw(ShapeRenderer render)
 	{
-		if(mShapeDrawable != null){
-			mShapeDrawable.draw(render);
+		if(mObstacleDrawable != null){
+			mObstacleDrawable.draw(render);
 		}
 	}
 	

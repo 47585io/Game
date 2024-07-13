@@ -1,7 +1,7 @@
 package com.mygame.abbox.share.input;
 import com.badlogic.gdx.scenes.scene2d.*;
 
-public abstract class onTouchMove extends InputListener
+public class onTouchMove extends InputListener
 {
 	private InputRecording mInputRecording;
 	
@@ -9,7 +9,7 @@ public abstract class onTouchMove extends InputListener
 		return mInputRecording;
 	}
 	
-	public abstract void move(InputEvent event, int dx, int dy, int orginDx, int orginDy)
+	public void move(InputEvent event, int dx, int dy, int orginDx, int orginDy){}
 	
 	public boolean touchDown(InputEvent event, float x, float y, int pointer, int button)
 	{
@@ -26,7 +26,7 @@ public abstract class onTouchMove extends InputListener
 
 	public void touchDragged(InputEvent event, float x, float y, int pointer)
 	{
-		//计算偏移距离
+		//继续追踪第一根手指的位置，计算偏移距离
 		if(pointer == mInputRecording.pointer){
 			mInputRecording.setNowPos((int)x, (int)y);
 			move(event, mInputRecording.getDx(), mInputRecording.getDy(), mInputRecording.getOrginDx(), mInputRecording.getOrginDy());

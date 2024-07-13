@@ -38,29 +38,33 @@ public class Scenes extends InputAdapter
 
 	public boolean touchDown(int screenX, int screenY, int pointer, int button)
 	{
+		boolean consume = false;
 		setTouchEvent(screenX, screenY, pointer, button, InputEvent.Type.touchDown);
-		int scrollX = mObstacleGroup.getScrollX();
-		int scrollY = mObstacleGroup.getScrollY();
-		mObstacleGroup.touchDown(mInputEvent, screenX + scrollX, screenY + scrollY, pointer, button);
-	
-		return false;
+		consume = mObstacleGroup.touchDown(mInputEvent, screenX, screenY, pointer, button);
+		if(consume){
+			pointerIdBits |= 1 << pointer;
 		}
+		return consume;
+	}
 
 	public boolean touchDragged(int screenX, int screenY, int pointer)
 	{
+		if(((pointerIdBits >> pointer) & 1) == 0){
+			return false;
+		}
 		setTouchEvent(screenX, screenY, pointer, 0, InputEvent.Type.touchDragged);
-		int scrollX = mObstacleGroup.getScrollX();
-		int scrollY = mObstacleGroup.getScrollY();
-		mObstacleGroup.touchDragged(mInputEvent, screenX + scrollX, screenY + scrollY, pointer);
+		mObstacleGroup.touchDragged(mInputEvent, screenX, screenY, pointer);
 		return true;
 	}
 
 	public boolean touchUp(int screenX, int screenY, int pointer, int button)
 	{
+		if(((pointerIdBits >> pointer) & 1) == 0){
+			return false;
+		}
 		setTouchEvent(screenX, screenY, pointer, button, InputEvent.Type.touchUp);
-		int scrollX = mObstacleGroup.getScrollX();
-		int scrollY = mObstacleGroup.getScrollY();
-		mObstacleGroup.touchUp(mInputEvent, screenX + scrollX, screenY + scrollY, pointer, button);
+		mObstacleGroup.touchUp(mInputEvent, screenX, screenY, pointer, button);
+		pointerIdBits &= ~(1 << pointer);
 		return true;
 	}
 	
@@ -81,5 +85,6 @@ public class Scenes extends InputAdapter
 	private ObstacleGroup mObstacleGroup;
 	private GameManger mGameManger;
 	
+	private int pointerIdBits;
 	private InputEvent mInputEvent;
 }
